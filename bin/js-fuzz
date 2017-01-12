@@ -1,0 +1,39 @@
+#!/usr/bin/env node
+
+'use strict'
+
+const Cluster = require('../lib/Cluster').Cluster;
+const figures = require('figures');
+const chalk = require('chalk');
+const path = require('path');
+const os = require('os');
+
+const argv = require('yargs')
+  .usage('Usage: $0 <file> [] [--exclude package1 package2]')
+  .demandCommand(1, 'Please specify a file to fuzz')
+  .options({
+    e: {
+      alias: 'exclude',
+      describe: 'List of package regexes that will be excluded from coverage analysis',
+      type: 'array',
+      default: [],
+    },
+    w: {
+      alias: 'workers',
+      describe: 'The number of workers to spawn to run fuzzing.',
+      default: os.cpus().length
+    }
+  })
+  .argv;
+
+const c = new Cluster({
+  target: path.resolve(process.cwd(), argv._[0]),
+  exclude: argv.exclude,
+  workers: argv.workers
+});
+
+c.on('info', msg => console.log(` ${chalk.blue(figures.info)} ${msg}`));
+c.on('warn', msg => console.log(` ${chalk.yellow(figures.warning)} ${msg}`));
+c.on('error', err => console.log(` ${chalk.red(figures.cross)} ${err.stack || err.message || err}`));
+
+c.start()
