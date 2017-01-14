@@ -7,13 +7,21 @@ import { ICompletedWork, IDoWork, IModule, ipcCall } from './IPCCalls';
 /**
  * The Manager lives inside the Cluster and manages events for a single
  * fuzzing worker instance.
+ *
+ * This uses Node's native IPC and encodes messages via JSON. Since a good
+ * chunk of what we're sending is binary data, I thought that using a binary
+ * protocol (protobufs) would be faster, but it turned out that it ran
+ * at 75% of the speed of the JSON version (using childrens' stdin/out).
+ *
+ * Moral of the story: V8's JSON implementation is a beast,
+ * beating it is not easy.
  */
 class Manager extends EventEmitter {
 
   constructor(private proc: cp.ChildProcess) {
     super();
 
-    proc.on('message', (msg: ipcCall) => { // todo(connor4312): is ipc 'fast enough', would a binary protocol benefit us?
+    proc.on('message', (msg: ipcCall) => {
       switch (msg.kind) {
       case 'ready':
         this.emit('ready');
