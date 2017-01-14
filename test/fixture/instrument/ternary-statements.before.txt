@@ -1,0 +1,7 @@
+if (foo() ? true : false) {
+  bar();
+}
+
+const x = foo ? true : false;
+
+(foo() ? bin : baz)();

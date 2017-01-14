@@ -2,7 +2,32 @@
 
 'use strict'
 
-const Instrumenter = require('../lib/src/Instrumenter').Instrumenter
-const file = require('fs').readFileSync(process.argv[2], 'utf8')
+const argv = require('yargs')
+  .usage('Usage: $0 <file> [--deterministicKeys]')
+  .demandCommand(1, 'Please specify a file to walk')
+  .options({
+    s: {
+      alias: 'hashBits',
+      describe: 'Hashmap size in bits',
+      type: 'number',
+      default: 16
+    },
+    d: {
+      alias: 'deterministicKeys',
+      describe: 'Use deterministic keys for branch tagging',
+      type: 'boolean',
+      default: false
+    },
+    v: {
+      alias: 'hashName',
+      describe: 'Global variable name to store the hashmap in',
+      type: 'string',
+      default: '__coverage__'
+    },
+  })
+  .argv
 
-console.log(new Instrumenter().instrument(file))
+const Instrumenter = require('../lib/src/Instrumenter').Instrumenter
+const file = require('fs').readFileSync(argv._[0], 'utf8')
+
+console.log(new Instrumenter(argv).instrument(file))

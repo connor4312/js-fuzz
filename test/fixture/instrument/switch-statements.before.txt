@@ -1,0 +1,9 @@
+switch (foo() || bar()) {
+  case true:
+    bar();
+  case false:
+    baz();
+    break;
+  default:
+    bin()
+}

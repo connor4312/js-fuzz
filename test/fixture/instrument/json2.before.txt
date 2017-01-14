@@ -1,4 +1,5 @@
 // Douglas Crockford's JSON implementation, from https://github.com/douglascrockford/JSON-js/blob/master/json2.js
+// Used as a test for some "real world" code ;)
 
 const JSON2 = (function () {
     "use strict";

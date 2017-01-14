@@ -9,7 +9,7 @@ const path = require('path')
 const os = require('os')
 
 const argv = require('yargs')
-  .usage('Usage: $0 <file> [] [--exclude package1 package2]')
+  .usage('Usage: $0 <file> [--exclude package1 package2]')
   .demandCommand(1, 'Please specify a file to fuzz')
   .options({
     e: {

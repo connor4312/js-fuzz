@@ -1,0 +1,15 @@
+switch ((__coverage__[__coverage___prevState ^ 1]++, __coverage___prevState = 1, foo()) || (__coverage__[__coverage___prevState ^ 2]++, __coverage___prevState = 2, bar())) {
+case true:
+    __coverage__[__coverage___prevState ^ 3]++;
+    __coverage___prevState = 3;
+    bar();
+case false:
+    __coverage__[__coverage___prevState ^ 4]++;
+    __coverage___prevState = 4;
+    baz();
+    break;
+default:
+    __coverage__[__coverage___prevState ^ 5]++;
+    __coverage___prevState = 5;
+    bin();
+}

@@ -1,0 +1,387 @@
+const JSON2 = function () {
+    'use strict';
+    var rx_one = /^[\],:{}\s]*$/;
+    var rx_two = /\\(?:["\\\/bfnrt]|u[0-9a-fA-F]{4})/g;
+    var rx_three = /"[^"\\\n\r]*"|true|false|null|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?/g;
+    var rx_four = /(?:^|:|,)(?:\s*\[)+/g;
+    var rx_escapable = /[\\"\u0000-\u001f\u007f-\u009f\u00ad\u0600-\u0604\u070f\u17b4\u17b5\u200c-\u200f\u2028-\u202f\u2060-\u206f\ufeff\ufff0-\uffff]/g;
+    var rx_dangerous = /[\u0000\u00ad\u0600-\u0604\u070f\u17b4\u17b5\u200c-\u200f\u2028-\u202f\u2060-\u206f\ufeff\ufff0-\uffff]/g;
+    function f(n) {
+        return n < 10 ? (__coverage__[__coverage___prevState ^ 1]++, __coverage___prevState = 1, '0' + n) : (__coverage__[__coverage___prevState ^ 2]++, __coverage___prevState = 2, n);
+    }
+    function this_value() {
+        return this.valueOf();
+    }
+    if (typeof Date.prototype.toJSON !== 'function') {
+        __coverage__[__coverage___prevState ^ 3]++;
+        __coverage___prevState = 3;
+        Date.prototype.toJSON = function () {
+            return isFinite(this.valueOf()) ? (__coverage__[__coverage___prevState ^ 4]++, __coverage___prevState = 4, this.getUTCFullYear() + '-' + f(this.getUTCMonth() + 1) + '-' + f(this.getUTCDate()) + 'T' + f(this.getUTCHours()) + ':' + f(this.getUTCMinutes()) + ':' + f(this.getUTCSeconds()) + 'Z') : (__coverage__[__coverage___prevState ^ 5]++, __coverage___prevState = 5, null);
+        };
+        Boolean.prototype.toJSON = this_value;
+        Number.prototype.toJSON = this_value;
+        String.prototype.toJSON = this_value;
+    }
+    var gap;
+    var indent;
+    var meta;
+    var rep;
+    function quote(string) {
+        rx_escapable.lastIndex = 0;
+        return rx_escapable.test(string) ? (__coverage__[__coverage___prevState ^ 6]++, __coverage___prevState = 6, '"' + string.replace(rx_escapable, function (a) {
+            var c = meta[a];
+            return typeof c === 'string' ? (__coverage__[__coverage___prevState ^ 8]++, __coverage___prevState = 8, c) : (__coverage__[__coverage___prevState ^ 9]++, __coverage___prevState = 9, '\\u' + ('0000' + a.charCodeAt(0).toString(16)).slice(-4));
+        }) + '"') : (__coverage__[__coverage___prevState ^ 7]++, __coverage___prevState = 7, '"' + string + '"');
+    }
+    function str(key, holder) {
+        var i;
+        var k;
+        var v;
+        var length;
+        var mind = gap;
+        var partial;
+        var value = holder[key];
+        if ((__coverage__[__coverage___prevState ^ 11]++, __coverage___prevState = 11, (__coverage__[__coverage___prevState ^ 13]++, __coverage___prevState = 13, value) && (__coverage__[__coverage___prevState ^ 14]++, __coverage___prevState = 14, typeof value === 'object')) && (__coverage__[__coverage___prevState ^ 12]++, __coverage___prevState = 12, typeof value.toJSON === 'function')) {
+            __coverage__[__coverage___prevState ^ 10]++;
+            __coverage___prevState = 10;
+            value = value.toJSON(key);
+        }
+        if (typeof rep === 'function') {
+            __coverage__[__coverage___prevState ^ 15]++;
+            __coverage___prevState = 15;
+            value = rep.call(holder, key, value);
+        }
+        switch (typeof value) {
+        case 'string':
+            __coverage__[__coverage___prevState ^ 16]++;
+            __coverage___prevState = 16;
+            return quote(value);
+        case 'number':
+            __coverage__[__coverage___prevState ^ 17]++;
+            __coverage___prevState = 17;
+            return isFinite(value) ? (__coverage__[__coverage___prevState ^ 18]++, __coverage___prevState = 18, String(value)) : (__coverage__[__coverage___prevState ^ 19]++, __coverage___prevState = 19, 'null');
+        case 'boolean':
+            __coverage__[__coverage___prevState ^ 20]++;
+            __coverage___prevState = 20;
+        case 'null':
+            __coverage__[__coverage___prevState ^ 21]++;
+            __coverage___prevState = 21;
+            return String(value);
+        case 'object':
+            __coverage__[__coverage___prevState ^ 22]++;
+            __coverage___prevState = 22;
+            if (!value) {
+                __coverage__[__coverage___prevState ^ 23]++;
+                __coverage___prevState = 23;
+                return 'null';
+            }
+            gap += indent;
+            partial = [];
+            if (Object.prototype.toString.apply(value) === '[object Array]') {
+                __coverage__[__coverage___prevState ^ 24]++;
+                __coverage___prevState = 24;
+                length = value.length;
+                for (i = 0; i < length; i += 1) {
+                    partial[i] = (__coverage__[__coverage___prevState ^ 25]++, __coverage___prevState = 25, str(i, value)) || (__coverage__[__coverage___prevState ^ 26]++, __coverage___prevState = 26, 'null');
+                }
+                v = partial.length === 0 ? (__coverage__[__coverage___prevState ^ 27]++, __coverage___prevState = 27, '[]') : (__coverage__[__coverage___prevState ^ 28]++, __coverage___prevState = 28, gap ? (__coverage__[__coverage___prevState ^ 29]++, __coverage___prevState = 29, '[\n' + gap + partial.join(',\n' + gap) + '\n' + mind + ']') : (__coverage__[__coverage___prevState ^ 30]++, __coverage___prevState = 30, '[' + partial.join(',') + ']'));
+                gap = mind;
+                return v;
+            }
+            if ((__coverage__[__coverage___prevState ^ 33]++, __coverage___prevState = 33, rep) && (__coverage__[__coverage___prevState ^ 34]++, __coverage___prevState = 34, typeof rep === 'object')) {
+                __coverage__[__coverage___prevState ^ 31]++;
+                __coverage___prevState = 31;
+                length = rep.length;
+                for (i = 0; i < length; i += 1) {
+                    if (typeof rep[i] === 'string') {
+                        __coverage__[__coverage___prevState ^ 35]++;
+                        __coverage___prevState = 35;
+                        k = rep[i];
+                        v = str(k, value);
+                        if (v) {
+                            __coverage__[__coverage___prevState ^ 36]++;
+                            __coverage___prevState = 36;
+                            partial.push(quote(k) + (gap ? (__coverage__[__coverage___prevState ^ 37]++, __coverage___prevState = 37, ': ') : (__coverage__[__coverage___prevState ^ 38]++, __coverage___prevState = 38, ':')) + v);
+                        }
+                    }
+                }
+            } else {
+                __coverage__[__coverage___prevState ^ 32]++;
+                __coverage___prevState = 32;
+                for (k in value) {
+                    if (Object.prototype.hasOwnProperty.call(value, k)) {
+                        __coverage__[__coverage___prevState ^ 39]++;
+                        __coverage___prevState = 39;
+                        v = str(k, value);
+                        if (v) {
+                            __coverage__[__coverage___prevState ^ 40]++;
+                            __coverage___prevState = 40;
+                            partial.push(quote(k) + (gap ? (__coverage__[__coverage___prevState ^ 41]++, __coverage___prevState = 41, ': ') : (__coverage__[__coverage___prevState ^ 42]++, __coverage___prevState = 42, ':')) + v);
+                        }
+                    }
+                }
+            }
+            v = partial.length === 0 ? (__coverage__[__coverage___prevState ^ 43]++, __coverage___prevState = 43, '{}') : (__coverage__[__coverage___prevState ^ 44]++, __coverage___prevState = 44, gap ? (__coverage__[__coverage___prevState ^ 45]++, __coverage___prevState = 45, '{\n' + gap + partial.join(',\n' + gap) + '\n' + mind + '}') : (__coverage__[__coverage___prevState ^ 46]++, __coverage___prevState = 46, '{' + partial.join(',') + '}'));
+            gap = mind;
+            return v;
+        }
+    }
+    const JSON = {};
+    if (typeof JSON.stringify !== 'function') {
+        __coverage__[__coverage___prevState ^ 47]++;
+        __coverage___prevState = 47;
+        meta = {
+            '\b': '\\b',
+            '\t': '\\t',
+            '\n': '\\n',
+            '\f': '\\f',
+            '\r': '\\r',
+            '"': '\\"',
+            '\\': '\\\\'
+        };
+        JSON.stringify = function (value, replacer, space) {
+            var i;
+            gap = '';
+            indent = '';
+            if (typeof space === 'number') {
+                __coverage__[__coverage___prevState ^ 48]++;
+                __coverage___prevState = 48;
+                for (i = 0; i < space; i += 1) {
+                    indent += ' ';
+                }
+            } else {
+                __coverage__[__coverage___prevState ^ 49]++;
+                __coverage___prevState = 49;
+                if (typeof space === 'string') {
+                    __coverage__[__coverage___prevState ^ 50]++;
+                    __coverage___prevState = 50;
+                    indent = space;
+                }
+            }
+            rep = replacer;
+            if ((__coverage__[__coverage___prevState ^ 52]++, __coverage___prevState = 52, (__coverage__[__coverage___prevState ^ 54]++, __coverage___prevState = 54, replacer) && (__coverage__[__coverage___prevState ^ 55]++, __coverage___prevState = 55, typeof replacer !== 'function')) && (__coverage__[__coverage___prevState ^ 53]++, __coverage___prevState = 53, (__coverage__[__coverage___prevState ^ 56]++, __coverage___prevState = 56, typeof replacer !== 'object') || (__coverage__[__coverage___prevState ^ 57]++, __coverage___prevState = 57, typeof replacer.length !== 'number'))) {
+                __coverage__[__coverage___prevState ^ 51]++;
+                __coverage___prevState = 51;
+                throw new Error('JSON.stringify');
+            }
+            return str('', { '': value });
+        };
+    }
+    if (typeof JSON.parse !== 'function') {
+        __coverage__[__coverage___prevState ^ 58]++;
+        __coverage___prevState = 58;
+        JSON.parse = function (text, reviver) {
+            var j;
+            function walk(holder, key) {
+                var k;
+                var v;
+                var value = holder[key];
+                if ((__coverage__[__coverage___prevState ^ 60]++, __coverage___prevState = 60, value) && (__coverage__[__coverage___prevState ^ 61]++, __coverage___prevState = 61, typeof value === 'object')) {
+                    __coverage__[__coverage___prevState ^ 59]++;
+                    __coverage___prevState = 59;
+                    for (k in value) {
+                        if (Object.prototype.hasOwnProperty.call(value, k)) {
+                            __coverage__[__coverage___prevState ^ 62]++;
+                            __coverage___prevState = 62;
+                            v = walk(value, k);
+                            if (v !== undefined) {
+                                __coverage__[__coverage___prevState ^ 63]++;
+                                __coverage___prevState = 63;
+                                value[k] = v;
+                            } else {
+                                __coverage__[__coverage___prevState ^ 64]++;
+                                __coverage___prevState = 64;
+                                delete value[k];
+                            }
+                        }
+                    }
+                }
+                return reviver.call(holder, key, value);
+            }
+            text = String(text);
+            rx_dangerous.lastIndex = 0;
+            if (rx_dangerous.test(text)) {
+                __coverage__[__coverage___prevState ^ 65]++;
+                __coverage___prevState = 65;
+                text = text.replace(rx_dangerous, function (a) {
+                    return '\\u' + ('0000' + a.charCodeAt(0).toString(16)).slice(-4);
+                });
+            }
+            if (rx_one.test(text.replace(rx_two, '@').replace(rx_three, ']').replace(rx_four, ''))) {
+                __coverage__[__coverage___prevState ^ 66]++;
+                __coverage___prevState = 66;
+                j = eval('(' + text + ')');
+                return typeof reviver === 'function' ? (__coverage__[__coverage___prevState ^ 67]++, __coverage___prevState = 67, walk({ '': j }, '')) : (__coverage__[__coverage___prevState ^ 68]++, __coverage___prevState = 68, j);
+            }
+            throw new SyntaxError('JSON.parse');
+        };
+    }
+    return JSON;
+}();
+JSON.parse(`{
+    "type": "Program",
+    "body": [
+        {
+            "type": "IfStatement",
+            "test": {
+                "type": "CallExpression",
+                "callee": {
+                    "type": "Identifier",
+                    "name": "foo"
+                },
+                "arguments": []
+            },
+            "consequent": {
+                "type": "BlockStatement",
+                "body": [
+                    {
+                        "type": "ExpressionStatement",
+                        "expression": {
+                            "type": "SequenceExpression",
+                            "expressions": [
+                                {
+                                    "type": "Identifier",
+                                    "name": "foo"
+                                },
+                                {
+                                    "type": "CallExpression",
+                                    "callee": {
+                                        "type": "Identifier",
+                                        "name": "bar"
+                                    },
+                                    "arguments": []
+                                }
+                            ]
+                        }
+                    }
+                ]
+            },
+            "alternate": null
+        },
+        {
+            "type": "IfStatement",
+            "test": {
+                "type": "CallExpression",
+                "callee": {
+                    "type": "Identifier",
+                    "name": "foo"
+                },
+                "arguments": []
+            },
+            "consequent": {
+                "type": "ExpressionStatement",
+                "expression": {
+                    "type": "CallExpression",
+                    "callee": {
+                        "type": "Identifier",
+                        "name": "bar"
+                    },
+                    "arguments": []
+                }
+            },
+            "alternate": null
+        },
+        {
+            "type": "IfStatement",
+            "test": {
+                "type": "CallExpression",
+                "callee": {
+                    "type": "Identifier",
+                    "name": "foo"
+                },
+                "arguments": []
+            },
+            "consequent": {
+                "type": "ExpressionStatement",
+                "expression": {
+                    "type": "CallExpression",
+                    "callee": {
+                        "type": "Identifier",
+                        "name": "bar"
+                    },
+                    "arguments": []
+                }
+            },
+            "alternate": {
+                "type": "ExpressionStatement",
+                "expression": {
+                    "type": "CallExpression",
+                    "callee": {
+                        "type": "Identifier",
+                        "name": "baz"
+                    },
+                    "arguments": []
+                }
+            }
+        },
+        {
+            "type": "IfStatement",
+            "test": {
+                "type": "LogicalExpression",
+                "operator": "||",
+                "left": {
+                    "type": "SequenceExpression",
+                    "expressions": [
+                        {
+                            "type": "CallExpression",
+                            "callee": {
+                                "type": "Identifier",
+                                "name": "whatever"
+                            },
+                            "arguments": []
+                        },
+                        {
+                            "type": "CallExpression",
+                            "callee": {
+                                "type": "Identifier",
+                                "name": "foo"
+                            },
+                            "arguments": []
+                        }
+                    ]
+                },
+                "right": {
+                    "type": "CallExpression",
+                    "callee": {
+                        "type": "Identifier",
+                        "name": "bin"
+                    },
+                    "arguments": []
+                }
+            },
+            "consequent": {
+                "type": "BlockStatement",
+                "body": [
+                    {
+                        "type": "ExpressionStatement",
+                        "expression": {
+                            "type": "CallExpression",
+                            "callee": {
+                                "type": "Identifier",
+                                "name": "bar"
+                            },
+                            "arguments": []
+                        }
+                    }
+                ]
+            },
+            "alternate": {
+                "type": "BlockStatement",
+                "body": [
+                    {
+                        "type": "ExpressionStatement",
+                        "expression": {
+                            "type": "CallExpression",
+                            "callee": {
+                                "type": "Identifier",
+                                "name": "baz"
+                            },
+                            "arguments": []
+                        }
+                    }
+                ]
+            }
+        }
+    ],
+    "sourceType": "script"
+}`);

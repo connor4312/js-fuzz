@@ -3,12 +3,20 @@ if (foo()) {
     __coverage___prevState = 1;
     bar();
 }
-if (foo())
-    __coverage__[__coverage___prevState ^ 2]++, __coverage___prevState = 2, bar();
-if (foo())
-    __coverage__[__coverage___prevState ^ 3]++, __coverage___prevState = 3, bar();
-else
-    __coverage__[__coverage___prevState ^ 4]++, __coverage___prevState = 4, baz();
+if (foo()) {
+    __coverage__[__coverage___prevState ^ 2]++;
+    __coverage___prevState = 2;
+    bar();
+}
+if (foo()) {
+    __coverage__[__coverage___prevState ^ 3]++;
+    __coverage___prevState = 3;
+    bar();
+} else {
+    __coverage__[__coverage___prevState ^ 4]++;
+    __coverage___prevState = 4;
+    baz();
+}
 if ((__coverage__[__coverage___prevState ^ 7]++, __coverage___prevState = 7, foo()) || (__coverage__[__coverage___prevState ^ 8]++, __coverage___prevState = 8, bin())) {
     __coverage__[__coverage___prevState ^ 5]++;
     __coverage___prevState = 5;

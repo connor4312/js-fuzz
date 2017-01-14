@@ -33,6 +33,21 @@ export interface IInstrumenterOptions {
 }
 
 /**
+ * Wraps the node as a block statement if it isn't already on.
+ */
+function ensureBlock(stmt: Statement): BlockStatement {
+  if (!stmt) {
+    return { type: 'BlockStatement', body: [] };
+  }
+
+  if (stmt.type !== 'BlockStatement') {
+    return { type: 'BlockStatement', body: [stmt] };
+  }
+
+  return stmt;
+}
+
+/**
  * Prepends the list of statements to the provided block and returns it. If
  * the block to be prepended to is already a BlockExpression, we'll just
  * modify its body, otherwise we'll wrap it using the comma operator.
@@ -49,6 +64,7 @@ function prependBlock(block: Statement, toPrepend: ExpressionStatement[]): Block
       throw new Error(`Unsupported wrap type ${block.type}`);
   }
 }
+
 /**
  * Prepends the list of statements to the provided expression and returns it.
  */
@@ -106,8 +122,14 @@ export class Instrumenter {
   private walk(stmt: Node): Node {
     switch (stmt.type) {
       case 'IfStatement':
-        stmt.consequent = prependBlock(stmt.consequent, this.createTransitionBlock());
-        stmt.alternate = stmt.alternate && prependBlock(stmt.alternate, this.createTransitionBlock());
+        stmt.consequent = prependBlock(
+          ensureBlock(stmt.consequent),
+          this.createTransitionBlock(),
+        );
+        stmt.alternate = stmt.alternate && prependBlock(
+          ensureBlock(stmt.alternate),
+          this.createTransitionBlock(),
+        );
         break;
       case 'ConditionalExpression':
         stmt.consequent = prependExpression(stmt.consequent, this.createTransitionBlock());
@@ -118,7 +140,8 @@ export class Instrumenter {
         stmt.right = prependExpression(stmt.right, this.createTransitionBlock());
         break;
       case 'SwitchCase':
-        stmt.consequent = (<Statement[]> this.createTransitionBlock()).concat(stmt.consequent);
+        stmt.consequent = (<Statement[]> this.createTransitionBlock())
+          .concat(stmt.consequent);
         break;
       default:
         // ignored

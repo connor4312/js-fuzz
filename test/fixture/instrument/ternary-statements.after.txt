@@ -1,0 +1,7 @@
+if (foo() ? (__coverage__[__coverage___prevState ^ 2]++, __coverage___prevState = 2, true) : (__coverage__[__coverage___prevState ^ 3]++, __coverage___prevState = 3, false)) {
+    __coverage__[__coverage___prevState ^ 1]++;
+    __coverage___prevState = 1;
+    bar();
+}
+const x = foo ? (__coverage__[__coverage___prevState ^ 4]++, __coverage___prevState = 4, true) : (__coverage__[__coverage___prevState ^ 5]++, __coverage___prevState = 5, false);
+(foo() ? (__coverage__[__coverage___prevState ^ 6]++, __coverage___prevState = 6, bin) : (__coverage__[__coverage___prevState ^ 7]++, __coverage___prevState = 7, baz))();
