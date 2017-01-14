@@ -2,7 +2,14 @@ import * as cp from 'child_process';
 import { randomBytes } from 'crypto';
 import { EventEmitter } from 'events';
 
-import { ICompletedWork, IDoWork, IModule, ipcCall } from './IPCCalls';
+import {
+  ICompletedWork,
+  IDoWork,
+  IModule,
+  ipcCall,
+  PacketKind,
+  Protocol,
+} from './Protocol';
 
 /**
  * The Manager lives inside the Cluster and manages events for a single
@@ -10,15 +17,18 @@ import { ICompletedWork, IDoWork, IModule, ipcCall } from './IPCCalls';
  */
 class Manager extends EventEmitter {
 
-  constructor(private proc: cp.ChildProcess) {
+  constructor(private proc: cp.ChildProcess, private proto: Protocol) {
     super();
 
-    proc.on('message', (msg: ipcCall) => { // todo(connor4312): is ipc 'fast enough', would a binary protocol benefit us?
+    proc.stderr.pipe(process.stderr);
+    proto.attach(proc.stdout, proc.stdin);
+
+    proto.on('message', (msg: ipcCall) => {
       switch (msg.kind) {
-      case 'ready':
+      case PacketKind.Ready:
         this.emit('ready');
         break;
-      case 'completedWork':
+      case PacketKind.CompletedWork:
         this.emit('completedWork', msg);
         break;
       default:
@@ -26,9 +36,8 @@ class Manager extends EventEmitter {
       }
     });
 
-    proc.on('error', err => {
-      this.emit('error', err);
-    });
+    proto.on('error', err => this.emit('error', err));
+    proc.on('error', err => this.emit('error', err));
 
     proc.on('exit', code => {
       if (code !== 0) {
@@ -40,11 +49,10 @@ class Manager extends EventEmitter {
   }
 
   public send(work: Buffer) {
-    const packet: IDoWork = {
-      kind: 'doWork',
-      input: work.toString('utf8'),
-    };
-    this.proc.send(packet);
+    this.proto.write({
+      kind: PacketKind.DoWork,
+      input: work,
+    });
   }
 
   /**
@@ -59,12 +67,14 @@ class Manager extends EventEmitter {
    * when it has signaled it's ready.
    */
   public static Spawn(target: string, exclude: string[]): Promise<Manager> {
-    return new Promise((resolve, reject) => {
+    return new Promise<Manager>((resolve, reject) => {
       const worker = new Manager(
-        cp.fork(
+        cp.spawn('node', [
           `${__dirname}/Worker.js`,
-          [target, JSON.stringify(exclude)],
-        ),
+          target,
+          JSON.stringify(exclude)
+        ]),
+        new Protocol(require('./fuzz')),
       );
       worker.once('ready', () => resolve(worker));
       worker.once('error', err => reject(err));

@@ -4,7 +4,7 @@
   "description": "An AFL-inspired genetic fuzz tester for JavaScript",
   "main": "index.js",
   "scripts": {
-    "build:dist": "npm run -s clean && tsc",
+    "build:dist": "npm run -s clean && tsc && pbjs src/fuzz.proto -t static-module > lib/fuzz.js",
     "clean": "rm -rf coverage doc lib",
     "test": "npm-run-all --parallel test:lint test:unit test:integrate",
     "test:lint": "tslint --type-check --project tsconfig.json '{src,test}/**/*.ts'",
@@ -19,7 +19,7 @@
   "dependencies": {
     "clone": "^2.1.0",
     "istanbul": "^0.4.5",
-    "rxjs": "^5.0.3",
+    "protobufjs": "^6.4.6",
     "yargs": "^6.6.0"
   },
   "bin": {
@@ -28,8 +28,8 @@
   "devDependencies": {
     "@types/clone": "^0.1.30",
     "@types/node": "^7.0.0",
+    "@types/protobufjs": "^5.0.31",
     "npm-run-all": "^4.0.0",
-    "standard": "^8.6.0",
     "ts-node": "^2.0.0",
     "tslint": "^4.3.1",
     "tslint-microsoft-contrib": "^4.0.0",
