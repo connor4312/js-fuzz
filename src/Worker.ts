@@ -1,10 +1,10 @@
 import * as clone from 'clone';
 import { IModule, ipcCall, WorkResult } from './IPCCalls';
 
-const Istanbul = require('istanbul'); // tslint:disable-line
+import istanbul = require('istanbul');
 
 /**
- * Subset of Istanbul's coverage output. There's DT typings for Istanbul but
+ * Subset of istanbul's coverage output. There's DT typings for Istanbul but
  * they're basically a shell.
  */
 interface ICoverage {
@@ -45,8 +45,8 @@ export class Worker {
   }
 
   public start() {
-    const instrumenter = new Istanbul.Instrumenter();
-    Istanbul.hook.hookRequire(
+    const instrumenter = new istanbul.Instrumenter();
+    istanbul.hook.hookRequire(
       file => !this.excludes.some(re => re.test(file)),
       (contents, file) => instrumenter.instrumentSync(contents, file),
     );
@@ -79,7 +79,7 @@ export class Worker {
       });
     }
 
-    const coverage: ICoverage =  Istanbul.utils.summarizeCoverage(__coverage__);
+    const coverage: ICoverage =  istanbul.utils.summarizeCoverage(__coverage__);
     this.send({
       coverage: coverage.branches.pct,
       result,

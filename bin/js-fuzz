@@ -2,11 +2,11 @@
 
 'use strict'
 
-const Cluster = require('../lib/Cluster').Cluster;
-const figures = require('figures');
-const chalk = require('chalk');
-const path = require('path');
-const os = require('os');
+const Cluster = require('../lib/src/Cluster').Cluster
+const figures = require('figures')
+const chalk = require('chalk')
+const path = require('path')
+const os = require('os')
 
 const argv = require('yargs')
   .usage('Usage: $0 <file> [] [--exclude package1 package2]')
@@ -16,7 +16,7 @@ const argv = require('yargs')
       alias: 'exclude',
       describe: 'List of package regexes that will be excluded from coverage analysis',
       type: 'array',
-      default: [],
+      default: []
     },
     w: {
       alias: 'workers',
@@ -24,16 +24,16 @@ const argv = require('yargs')
       default: os.cpus().length
     }
   })
-  .argv;
+  .argv
 
 const c = new Cluster({
   target: path.resolve(process.cwd(), argv._[0]),
   exclude: argv.exclude,
   workers: argv.workers
-});
+})
 
-c.on('info', msg => console.log(` ${chalk.blue(figures.info)} ${msg}`));
-c.on('warn', msg => console.log(` ${chalk.yellow(figures.warning)} ${msg}`));
-c.on('error', err => console.log(` ${chalk.red(figures.cross)} ${err.stack || err.message || err}`));
+c.on('info', msg => console.log(` ${chalk.blue(figures.info)} ${msg}`))
+c.on('warn', msg => console.log(` ${chalk.yellow(figures.warning)} ${msg}`))
+c.on('error', err => console.log(` ${chalk.red(figures.cross)} ${err.stack || err.message || err}`))
 
 c.start()

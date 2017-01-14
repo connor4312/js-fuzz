@@ -1,0 +1,17 @@
+if (foo()) {
+  bar();
+}
+
+if (foo())
+  bar();
+
+if (foo())
+  bar();
+else
+  baz();
+
+if (foo() || bin()) {
+  bar();
+} else {
+  baz();
+}

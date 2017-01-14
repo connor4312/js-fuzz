@@ -16,14 +16,11 @@
     "missing-jsdoc": false,
     "mocha-no-side-effect-code": false,
     "no-any": false,
-    "no-empty-interfaces": false,
-    "no-invalid-this": false,
     "no-multiline-string": false,
     "no-require-imports": false,
     "no-relative-imports": false,
-    "no-typeof-undefined": false,
-    "no-var-requires": false,
     "trailing-comma": [true, {"multiline": "always", "singleline": "never"}],
-    "underscore-consistent-invocation": false
+    "no-bitwise": false,
+    "insecure-random": false
   }
 }

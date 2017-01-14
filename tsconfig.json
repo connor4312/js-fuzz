@@ -1,12 +1,16 @@
 {
   "compilerOptions": {
-    "declaration": true,
+    "declaration": false,
     "module": "commonjs",
     "target": "es5",
     "outDir": "lib",
+    "allowJs": true,
     "lib": [
       "es5",
       "es6"
+    ],
+    "typeRoots": [
+      "node_modules/@types"
     ]
   },
   "exclude": [
