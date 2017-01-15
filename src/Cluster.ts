@@ -3,32 +3,33 @@ import { randomBytes } from 'crypto';
 import { EventEmitter } from 'events';
 
 import { HashStore } from './HashStore';
-import { ICompletedWork, IDoWork, IModule, ipcCall } from './IPCCalls';
+import {
+  ICompletedWork,
+  IModule,
+  ipcCall,
+  PacketKind,
+  Protocol,
+} from './Protocol';
 import { BlessedRenderer, Stats } from './Stats';
 
 /**
  * The Manager lives inside the Cluster and manages events for a single
  * fuzzing worker instance.
- *
- * This uses Node's native IPC and encodes messages via JSON. Since a good
- * chunk of what we're sending is binary data, I thought that using a binary
- * protocol (protobufs) would be faster, but it turned out that it ran
- * at 75% of the speed of the JSON version (using childrens' stdin/out).
- *
- * Moral of the story: V8's JSON implementation is a beast,
- * beating it is not easy.
  */
 class Manager extends EventEmitter {
 
-  constructor(private proc: cp.ChildProcess) {
+  constructor(private proc: cp.ChildProcess, private proto: Protocol) {
     super();
 
-    proc.on('message', (msg: ipcCall) => {
+    proc.stderr.pipe(process.stderr);
+    proto.attach(proc.stdout, proc.stdin);
+
+    proto.on('message', (msg: ipcCall) => {
       switch (msg.kind) {
-      case 'ready':
+      case PacketKind.Ready:
         this.emit('ready');
         break;
-      case 'completedWork':
+      case PacketKind.CompletedWork:
         this.emit('completedWork', msg);
         break;
       default:
@@ -36,9 +37,8 @@ class Manager extends EventEmitter {
       }
     });
 
-    proc.on('error', err => {
-      this.emit('error', err);
-    });
+    proto.on('error', (err: Error) => this.emit('error', err));
+    proc.on('error', err => this.emit('error', err));
 
     proc.on('exit', code => {
       if (code !== 0) {
@@ -50,11 +50,10 @@ class Manager extends EventEmitter {
   }
 
   public send(work: Buffer) {
-    const packet: IDoWork = {
-      kind: 'doWork',
-      input: work.toString('utf8'),
-    };
-    this.proc.send(packet);
+    this.proto.write({
+      kind: PacketKind.DoWork,
+      input: work,
+    });
   }
 
   /**
@@ -69,12 +68,14 @@ class Manager extends EventEmitter {
    * when it has signaled it's ready.
    */
   public static Spawn(target: string, exclude: string[]): Promise<Manager> {
-    return new Promise((resolve, reject) => {
+    return new Promise<Manager>((resolve, reject) => {
       const worker = new Manager(
-        cp.fork(
+        cp.spawn('node', [
           `${__dirname}/Worker.js`,
-          [target, JSON.stringify(exclude)],
-        ),
+          target,
+          JSON.stringify(exclude),
+        ]),
+        new Protocol(require('./fuzz')),
       );
       worker.once('ready', () => resolve(worker));
       worker.once('error', (err: Error) => reject(err));
@@ -205,7 +206,7 @@ export class Cluster extends EventEmitter {
   }
 
   private ingestCompletedWork(work: Buffer, result: ICompletedWork, worker: number) {
-    this.store.putIfNotExistent(Buffer.from(result.coverage, 'binary'));
+    this.store.putIfNotExistent(result.coverage);
     this.stats.recordExec(worker);
     this.stats.recordCoverageBranches(this.store.size());
   }

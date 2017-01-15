@@ -1,6 +1,6 @@
 import { hookRequire, Instrumenter } from './Instrumenter';
-import { IModule, ipcCall, WorkResult } from './IPCCalls';
 import { roundUint8ToNextPowerOfTwo } from './Math';
+import { IModule, ipcCall, PacketKind, Protocol, WorkResult } from './Protocol';
 
 /**
  * Evens off the statement count in the coverage into count "buckets".
@@ -32,6 +32,8 @@ export class Worker {
    */
   private instrumenter: Instrumenter;
 
+  private proto: Protocol;
+
   constructor(private targetPath: string, exclude: string[]) {
     this.excludes = exclude.map(e => new RegExp(e));
   }
@@ -46,9 +48,12 @@ export class Worker {
 
     this.target = require(this.targetPath); // tslint:disable-line
 
-    process.on('message', (msg: ipcCall) => {
+    const proto = this.proto = new Protocol(require('./fuzz'));
+    this.proto = proto;
+
+    proto.on('message', (msg: ipcCall) => {
       switch (msg.kind) {
-      case 'doWork':
+      case PacketKind.DoWork:
         this.doWork(msg.input);
         break;
       default:
@@ -56,17 +61,24 @@ export class Worker {
       }
     });
 
-    this.send({ kind: 'ready' });
+    proto.on('error', (err: Error) => {
+      console.error(err);
+      process.exit(1);
+    });
+
+    proto.attach(process.stdin, process.stdout);
+    proto.write({ kind: PacketKind.Ready });
   }
 
-  private doWork(input: string): void {
+  private doWork(input: Buffer): void {
     this.instrumenter.declareGlobal();
+
     let result: WorkResult;
     try {
-      result = this.target.fuzz(Buffer.from(input));
+      result = this.target.fuzz(input);
     } catch (e) {
-      return this.send({
-        kind: 'completedWork',
+      return this.proto.write({
+        kind: PacketKind.CompletedWork,
         result: WorkResult.Error,
         error: e.stack || e.message,
       });
@@ -74,15 +86,11 @@ export class Worker {
 
     const coverage = flattenBuckets(this.instrumenter.getLastCoverage());
 
-    this.send({
-      coverage: coverage.toString('binary'),
+    this.proto.write({
+      coverage,
       result,
-      kind: 'completedWork',
+      kind: PacketKind.CompletedWork,
     });
-  }
-
-  private send(result: ipcCall): void {
-    process.send(result);
   }
 }
 

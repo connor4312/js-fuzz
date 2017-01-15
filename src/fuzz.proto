@@ -1,0 +1,14 @@
+package fuzz;
+syntax = "proto3";
+
+message Ready {}
+
+message CompletedWork {
+  uint32 result = 1;
+  string error = 2;
+  bytes coverage = 3;
+}
+
+message DoWork {
+  bytes input = 1;
+}
