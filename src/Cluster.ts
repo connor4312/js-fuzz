@@ -1,16 +1,17 @@
 import * as cp from 'child_process';
-import { randomBytes } from 'crypto';
 import { EventEmitter } from 'events';
 
-import { HashStore } from './HashStore';
+import { Corpus, Input } from './Corpus';
 import {
-  ICompletedWork,
   IModule,
   ipcCall,
+  IWorkSummary,
   PacketKind,
   Protocol,
 } from './Protocol';
 import { BlessedRenderer, Stats } from './Stats';
+
+const split = require('split');
 
 /**
  * The Manager lives inside the Cluster and manages events for a single
@@ -21,7 +22,10 @@ class Manager extends EventEmitter {
   constructor(private proc: cp.ChildProcess, private proto: Protocol) {
     super();
 
-    proc.stderr.pipe(process.stderr);
+    proc.stderr
+      .pipe(split())
+      .on('data', (message: string) => this.emit('log', message));
+
     proto.attach(proc.stdout, proc.stdin);
 
     proto.on('message', (msg: ipcCall) => {
@@ -29,8 +33,11 @@ class Manager extends EventEmitter {
       case PacketKind.Ready:
         this.emit('ready');
         break;
-      case PacketKind.CompletedWork:
-        this.emit('completedWork', msg);
+      case PacketKind.WorkSummary:
+        this.emit('workSummary', msg);
+        break;
+      case PacketKind.WorkCoverage:
+        this.emit('workCoverage', msg.coverage);
         break;
       default:
         throw new Error(`Unknown IPC call: ${msg.kind}`);
@@ -49,11 +56,21 @@ class Manager extends EventEmitter {
     });
   }
 
+  /**
+   * Sends new work to the working process.
+   */
   public send(work: Buffer) {
     this.proto.write({
       kind: PacketKind.DoWork,
       input: work,
     });
+  }
+  /**
+   * Sends new work to the working process.
+   */
+  public requestCoverage(callback: (coverage: Buffer) => void) {
+    this.proto.write({ kind: PacketKind.RequestCoverage });
+    this.once('workCoverage', callback);
   }
 
   /**
@@ -115,7 +132,7 @@ export class Cluster extends EventEmitter {
 
   private workers: Manager[] = [];
   private stats = new Stats();
-  private store = new HashStore();
+  private store = new Corpus();
 
   constructor(private options: IClusterOptions) {
     super();
@@ -181,15 +198,30 @@ export class Cluster extends EventEmitter {
    * Hooks into events on the worker and reboots it if it dies.
    */
   private monitorWorker(worker: Manager, index: number) {
+    let lastInput: Input;
     let lastWork: Buffer;
     const sendNextPacket = () => {
-      lastWork = this.generateNextFuzz();
+      lastInput = this.store.pickWeighted();
+      lastWork = lastInput.mutate();
       worker.send(lastWork);
     };
 
-    worker.on('completedWork', (result: ICompletedWork) => {
-      this.ingestCompletedWork(lastWork, result, index);
-      sendNextPacket();
+    worker.on('log', (line: string) => {
+      this.stats.log(`Worker #${index}: ${line}`);
+    });
+
+    worker.on('workSummary', (result: IWorkSummary) => {
+      const next = new Input(lastWork, lastInput.depth + 1, result);
+      this.stats.recordExec(index);
+      if (!this.store.isInterestedIn(next)) {
+        return sendNextPacket();
+      }
+
+      worker.requestCoverage(coverage => {
+        this.store.put(next);
+        this.stats.recordCoverageBranches(this.store.size());
+        sendNextPacket();
+      });
     });
 
     worker.on('error', (err: Error) => {
@@ -203,15 +235,5 @@ export class Cluster extends EventEmitter {
     });
 
     sendNextPacket();
-  }
-
-  private ingestCompletedWork(work: Buffer, result: ICompletedWork, worker: number) {
-    this.store.putIfNotExistent(result.coverage);
-    this.stats.recordExec(worker);
-    this.stats.recordCoverageBranches(this.store.size());
-  }
-
-  private generateNextFuzz(): Buffer {
-    return randomBytes(32);
   }
 }

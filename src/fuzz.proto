@@ -3,10 +3,17 @@ syntax = "proto3";
 
 message Ready {}
 
-message CompletedWork {
+message RequestCoverage {}
+
+message WorkSummary {
   uint32 result = 1;
-  string error = 2;
-  bytes coverage = 3;
+  string hash = 2;
+  uint32 runtime = 3;
+  string error = 4;
+}
+
+message WorkCoverage {
+  bytes coverage = 1;
 }
 
 message DoWork {

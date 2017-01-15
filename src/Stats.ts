@@ -3,6 +3,7 @@ import { EventEmitter } from 'events';
 const prettyMs = require('pretty-ms');
 const blessed = require('blessed');
 const contrib = require('blessed-contrib');
+const filesize = require('filesize');
 
 interface ISeries {
   x: number[];
@@ -132,13 +133,18 @@ export class Stats extends EventEmitter {
   }
 
   /**
-   * Returns the number of executions per second,
-   * grouped by time, for a single worker.
+   * Returns the number of executions per `scale` seconds for a single worker.
+   * Scale must be a multiple of the collection duration over the draw interval.
    */
-  public getWorkerExecPlot(worker: number): number[] {
+  public getWorkerExecPlot(worker: number, scale: number = 1): number[] {
     const output = [];
     for (let i = this.execsSeries.length - 1; i >= 0; i -= 1) {
-      output.push(this.execsSeries[i][worker] || 0);
+      let sum = 0;
+      for (const end = i - scale; i > end; i -= 1) {
+        sum += this.execsSeries[i][worker] || 0;
+      }
+
+      output.push(sum);
     }
 
     return output;
@@ -201,7 +207,7 @@ export class BlessedRenderer {
       wholeNumbersOnly: true,
     }),
     execsPerWorker: this.grid.set(3, 0, 9, 2, contrib.sparkline, {
-      label: 'Throughput (execs/sec)',
+      label: 'Worker Throughput',
       tags: true,
       style: { fg: 'blue' },
     }),
@@ -223,13 +229,14 @@ export class BlessedRenderer {
       `{green-fg}Branches hit{/green-fg}: ${this.stats.getBranchCount()}`,
       `{green-fg}Executions{/green-fg}: ${this.stats.getTotalExecs()}`,
       `{green-fg}Executions/sec{/green-fg}: ${this.stats.getExecsPerSecond()}`,
+      `{green-fg}Heap Size{/green-fg}: ${filesize(process.memoryUsage().heapUsed)}`,
     ].join('\n'));
 
     const sparkColumns: string[] = [];
     const sparkData: number[][] = [];
     for (let i = 0; i < workers; i += 1) {
       sparkColumns.push(`Worker ${i}`);
-      sparkData.push(this.stats.getWorkerExecPlot(i));
+      sparkData.push(this.stats.getWorkerExecPlot(i, 2));
     }
 
     this.panels.execsPerWorker.setData(sparkColumns, sparkData);

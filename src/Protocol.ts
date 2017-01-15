@@ -86,15 +86,22 @@ class RWBuffer {
  * IModule is the module type we expect to be passed to
  */
 export interface IModule {
+  fuzz(input: Buffer, callback: (err: any, res: WorkResult) => void): void;
+  fuzz(input: Buffer): Promise<WorkResult>;
   fuzz(input: Buffer): WorkResult;
 }
 
 export enum PacketKind {
   Ready,
-  CompletedWork,
+  WorkSummary,
+  RequestCoverage,
+  WorkCoverage,
   DoWork,
 }
 
+/**
+ * An IReady message is sent from workers when their code is loaded and ready to go.
+ */
 export interface IReadyCall {
   kind: PacketKind.Ready;
 }
@@ -106,19 +113,44 @@ export enum WorkResult {
   Error,
 }
 
-export interface ICompletedWork {
-  kind: PacketKind.CompletedWork;
-  result: WorkResult;
-  error?: string;
-  coverage?: Buffer;
+/**
+ * An IRequestCoverage is sent from the master to the slave if the work
+ * resulted in something that looks interesting.
+ */
+export interface IRequestCoverage {
+  kind: PacketKind.RequestCoverage;
 }
 
+/**
+ * A WorkSummary is sent from the slave to the master when work is completed.
+ */
+export interface IWorkSummary {
+  kind: PacketKind.WorkSummary;
+  result: WorkResult;
+  coverageSize: number;
+  inputLength: number;
+  hash: string;
+  runtime: number; // given in microseconds
+  error?: string;
+}
+
+/**
+ * An IWorkCoverage is sent in response to an IRequestCoverage message.
+ */
+export interface IWorkCoverage {
+  kind: PacketKind.WorkCoverage;
+  coverage: Buffer;
+}
+
+/**
+ * IDoWork is sent to signal a slave that we want to fuzz the given input.
+ */
 export interface IDoWork {
   kind: PacketKind.DoWork;
   input: Buffer;
 }
 
-export type ipcCall = ICompletedWork | IDoWork | IReadyCall;
+export type ipcCall = IWorkSummary | IDoWork | IReadyCall | IWorkCoverage | IRequestCoverage;
 
 /**
  * Protocol implements a super simple protobuf-based encoding on top of

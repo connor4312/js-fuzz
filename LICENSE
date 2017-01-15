@@ -19,3 +19,9 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+======================
+
+Segments of this code build upon code previously written in go-fuzz and the
+American Fuzzy Lop, which are licensed under the Apache 2.0 license:
+https://github.com/dvyukov/go-fuzz/blob/master/LICENSE

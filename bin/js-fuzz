@@ -38,4 +38,9 @@ const c = new Cluster({
   quiet: argv.quiet
 })
 
+if (argv.quiet) {
+  c.on('error', err => console.error(err.stack || err.message))
+  c.on('warn', message => console.error(message))
+}
+
 c.start()
