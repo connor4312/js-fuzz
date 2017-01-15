@@ -20,7 +20,7 @@ export interface ICompletedWork {
   kind: 'completedWork';
   result: WorkResult;
   error?: string;
-  coverage?: number;
+  coverage?: string;
 }
 
 export interface IDoWork {

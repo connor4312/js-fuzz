@@ -9,6 +9,7 @@ import {
   SequenceExpression,
   Statement,
 } from 'estree';
+import { readFileSync } from 'fs';
 
 export interface IInstrumenterOptions {
   /**
@@ -78,6 +79,24 @@ function prependExpression(block: Expression, toPrepend: ExpressionStatement[]):
 }
 
 /**
+ * Adds a hook in `require()` which will transform files whose names pass
+ * the precicate using the transformation function.
+ */
+export function hookRequire(
+  predicate: (fname: string) => boolean,
+  transform: (input: string) => string,
+) {
+  require.extensions['.js'] = (m: any, fname: string) => {
+    const contents = readFileSync(fname, 'utf8');
+    if (predicate(fname)) {
+      m._compile(transform(contents), fname);
+    } else {
+      m._compile(contents, fname);
+    }
+  };
+}
+
+/**
  * The Instrumenter transforms JavaScript code adding coverage measurements
  * as described in AFL's whitepaper here:
  * http://lcamtuf.coredump.cx/afl/technical_details.txt
@@ -107,13 +126,20 @@ export class Instrumenter {
    * instrumented code is run.
    */
   public declareGlobal() {
-    global[this.getPrevStateName()] = 0;
-    const existing: Buffer = global[this.options.hashName];
+    (<any> global)[this.getPrevStateName()] = 0;
+    const existing: Buffer = (<any> global)[this.options.hashName];
     if (existing) {
       existing.fill(0);
     } else {
-      global[this.options.hashName] = Buffer.alloc(1 << this.options.hashBits);
+      (<any> global)[this.options.hashName] = Buffer.alloc(1 << this.options.hashBits);
     }
+  }
+
+  /**
+   * Returns the last coverage hashmap.
+   */
+  public getLastCoverage(): Buffer {
+    return (<any> global)[this.options.hashName];
   }
 
   /**
@@ -149,12 +175,12 @@ export class Instrumenter {
 
     const toVisit: string[] = (<any> ESTrasverse).VisitorKeys[stmt.type] || [];
     toVisit.forEach(key => {
-      const value = stmt[key];
+      const value: Node | Node[] = (<any> stmt)[key];
       if (!value) {
         return;
       }
 
-      stmt[key] = value instanceof Array
+      (<any> stmt)[key] = value instanceof Array
         ? value.map(s => this.walk(s))
         : this.walk(value);
     });

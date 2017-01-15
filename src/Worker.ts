@@ -1,22 +1,16 @@
-import * as clone from 'clone';
+import { hookRequire, Instrumenter } from './Instrumenter';
 import { IModule, ipcCall, WorkResult } from './IPCCalls';
-
-import istanbul = require('istanbul');
+import { roundUint8ToNextPowerOfTwo } from './Math';
 
 /**
- * Subset of istanbul's coverage output. There's DT typings for Istanbul but
- * they're basically a shell.
+ * Evens off the statement count in the coverage into count "buckets".
  */
-interface ICoverage {
-  branches: {
-    total: number;
-    covered: number;
-    skipped: number;
-    pct: number;
-  };
+function flattenBuckets(coverage: Buffer): Buffer {
+  for (let i = 0; i < coverage.length; i += 1) {
+    coverage[i] = roundUint8ToNextPowerOfTwo(coverage[i]);
+  }
+  return coverage;
 }
-
-declare var __coverage__: ICoverage;
 
 /**
  * The worker is attached to a Cluster and runs the target script when the
@@ -28,31 +22,29 @@ export class Worker {
    * The module to be put under fuzzing
    */
   private target: IModule;
-
-  /**
-   * The initial __coverage__ state, deep cloned, so that we can
-   * restore it between tests.
-   */
-  private defaultCoverage: ICoverage;
-
   /**
    * List of modules to exclude from code coverage analysis.
    */
   private excludes: RegExp[] = [];
+
+  /**
+   * Instrumenter used for the worker code's code.
+   */
+  private instrumenter: Instrumenter;
 
   constructor(private targetPath: string, exclude: string[]) {
     this.excludes = exclude.map(e => new RegExp(e));
   }
 
   public start() {
-    const instrumenter = new istanbul.Instrumenter();
-    istanbul.hook.hookRequire(
+    const instrumenter = this.instrumenter = new Instrumenter();
+    instrumenter.declareGlobal();
+    hookRequire(
       file => !this.excludes.some(re => re.test(file)),
-      (contents, file) => instrumenter.instrumentSync(contents, file),
+      contents => instrumenter.instrument(contents),
     );
 
     this.target = require(this.targetPath); // tslint:disable-line
-    this.defaultCoverage = clone(__coverage__);
 
     process.on('message', (msg: ipcCall) => {
       switch (msg.kind) {
@@ -68,6 +60,7 @@ export class Worker {
   }
 
   private doWork(input: string): void {
+    this.instrumenter.declareGlobal();
     let result: WorkResult;
     try {
       result = this.target.fuzz(Buffer.from(input));
@@ -79,9 +72,10 @@ export class Worker {
       });
     }
 
-    const coverage: ICoverage =  istanbul.utils.summarizeCoverage(__coverage__);
+    const coverage = flattenBuckets(this.instrumenter.getLastCoverage());
+
     this.send({
-      coverage: coverage.branches.pct,
+      coverage: coverage.toString('binary'),
       result,
       kind: 'completedWork',
     });

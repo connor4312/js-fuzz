@@ -21,6 +21,7 @@
     "no-relative-imports": false,
     "trailing-comma": [true, {"multiline": "always", "singleline": "never"}],
     "no-bitwise": false,
-    "insecure-random": false
+    "insecure-random": false,
+    "no-var-requires": false
   }
 }

@@ -23,7 +23,7 @@ const argv = require('yargs')
       describe: 'Global variable name to store the hashmap in',
       type: 'string',
       default: '__coverage__'
-    },
+    }
   })
   .argv
 

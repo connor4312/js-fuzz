@@ -2,7 +2,9 @@ import * as cp from 'child_process';
 import { randomBytes } from 'crypto';
 import { EventEmitter } from 'events';
 
+import { HashStore } from './HashStore';
 import { ICompletedWork, IDoWork, IModule, ipcCall } from './IPCCalls';
+import { BlessedRenderer, Stats } from './Stats';
 
 /**
  * The Manager lives inside the Cluster and manages events for a single
@@ -75,7 +77,7 @@ class Manager extends EventEmitter {
         ),
       );
       worker.once('ready', () => resolve(worker));
-      worker.once('error', err => reject(err));
+      worker.once('error', (err: Error) => reject(err));
     });
   }
 }
@@ -98,6 +100,11 @@ export interface IClusterOptions {
    * Patterns for files or modules which should be excluded from coverage.
    */
   exclude: string[];
+
+  /**
+   * If set to true, stats will not be drawn and the process will not print anything.
+   */
+  quiet: boolean;
 }
 
 /**
@@ -106,18 +113,20 @@ export interface IClusterOptions {
 export class Cluster extends EventEmitter {
 
   private workers: Manager[] = [];
-
-  // Crude collection of stats, to be filled out more nicely later ;)
-  private totalCalls = 0;
-  private calls = 0;
+  private stats = new Stats();
+  private store = new HashStore();
 
   constructor(private options: IClusterOptions) {
     super();
 
-    setInterval(() => {
-      this.emit('info', `Fuzzing w/ ${this.options.workers} slaves, ${this.totalCalls} execs (${this.calls} calls/sec)`);
-      this.calls = 0;
-    }, 1000);
+    this.stats.setWorkerProcesses(options.workers);
+    if (!options.quiet) {
+      new BlessedRenderer().attach(this.stats);
+    }
+
+    this.on('info', (message: string) => this.stats.log(message));
+    this.on('warn', (message: string) => this.stats.log(message));
+    this.on('error', (message: string) => this.stats.log(message));
   }
 
   /**
@@ -132,7 +141,10 @@ export class Cluster extends EventEmitter {
 
     const todo = [];
     for (let i = 0; i < this.options.workers; i += 1) {
-      todo.push(Manager.Spawn(this.options.target, this.options.exclude));
+      todo.push(Manager.Spawn(
+        this.options.target,
+        this.options.exclude,
+      ));
     }
 
     Promise.all(todo)
@@ -175,11 +187,11 @@ export class Cluster extends EventEmitter {
     };
 
     worker.on('completedWork', (result: ICompletedWork) => {
-      this.ingestCompletedWork(lastWork, result);
+      this.ingestCompletedWork(lastWork, result, index);
       sendNextPacket();
     });
 
-    worker.on('error', err => {
+    worker.on('error', (err: Error) => {
       this.emit('warn', `Worker ${index} crashed with error: ${err.stack || err}`);
       worker.kill();
       worker.removeAllListeners();
@@ -192,9 +204,10 @@ export class Cluster extends EventEmitter {
     sendNextPacket();
   }
 
-  private ingestCompletedWork(work: Buffer, result: ICompletedWork) {
-    this.totalCalls += 1;
-    this.calls += 1;
+  private ingestCompletedWork(work: Buffer, result: ICompletedWork, worker: number) {
+    this.store.putIfNotExistent(Buffer.from(result.coverage, 'binary'));
+    this.stats.recordExec(worker);
+    this.stats.recordCoverageBranches(this.store.size());
   }
 
   private generateNextFuzz(): Buffer {

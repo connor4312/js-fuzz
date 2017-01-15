@@ -2,9 +2,9 @@
 
 'use strict'
 
+process.env.TERM = 'windows-ansi' // hack for Cygwin/conemu
+
 const Cluster = require('../lib/src/Cluster').Cluster
-const figures = require('figures')
-const chalk = require('chalk')
 const path = require('path')
 const os = require('os')
 
@@ -22,6 +22,11 @@ const argv = require('yargs')
       alias: 'workers',
       describe: 'The number of workers to spawn to run fuzzing.',
       default: os.cpus().length
+    },
+    q: {
+      alias: 'quiet',
+      describe: 'Hide the stats output',
+      default: false
     }
   })
   .argv
@@ -29,11 +34,8 @@ const argv = require('yargs')
 const c = new Cluster({
   target: path.resolve(process.cwd(), argv._[0]),
   exclude: argv.exclude,
-  workers: argv.workers
+  workers: argv.workers,
+  quiet: argv.quiet
 })
-
-c.on('info', msg => console.log(` ${chalk.blue(figures.info)} ${msg}`))
-c.on('warn', msg => console.log(` ${chalk.yellow(figures.warning)} ${msg}`))
-c.on('error', err => console.log(` ${chalk.red(figures.cross)} ${err.stack || err.message || err}`))
 
 c.start()
