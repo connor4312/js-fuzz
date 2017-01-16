@@ -74,9 +74,12 @@ The runner spawns child processes which execute the given input module, by defau
 
 #### Limitations
 
+Most limitations revolve around what Node will let us get at without leaning on native extensions, which I would prefer to avoid for maintainability and compatibility reasons.
+
  - This doesn't currently work in browsers, though I want it to do so in the future.
  - We don't have any coverage analysis for native extensions and I am not planning on adding it (though I am open to PRs).
  - This implementation is bounded, at least in simple programs by memory throughput; much copying and moving has to be done as slave processes serialize and unserialize data with communicating with the master. Outside of writing native bindings I am unsure how this problem could be addressed.
+ - We aren't always able to collect coverage statistics for tasks which time out. While we still record the input, we aren't able to dedupe test cases.
 
 #### Acknowledgments
 

@@ -9,9 +9,15 @@ import {
   PacketKind,
   Protocol,
 } from './Protocol';
+import { FileSerializer } from './Serializer';
 import { BlessedRenderer, Stats } from './Stats';
 
 const split = require('split');
+
+interface IManagerOptions {
+  timeout: number;
+  exclude: string[];
+}
 
 /**
  * The Manager lives inside the Cluster and manages events for a single
@@ -19,7 +25,13 @@ const split = require('split');
  */
 class Manager extends EventEmitter {
 
-  constructor(private proc: cp.ChildProcess, private proto: Protocol) {
+  private timeoutHandle: NodeJS.Timer;
+
+  constructor(
+    private proc: cp.ChildProcess,
+    private proto: Protocol,
+    private options: IManagerOptions,
+  ) {
     super();
 
     proc.stderr
@@ -34,6 +46,7 @@ class Manager extends EventEmitter {
         this.emit('ready');
         break;
       case PacketKind.WorkSummary:
+        this.clearTimeout();
         this.emit('workSummary', msg);
         break;
       case PacketKind.WorkCoverage:
@@ -60,11 +73,13 @@ class Manager extends EventEmitter {
    * Sends new work to the working process.
    */
   public send(work: Buffer) {
+    this.setTimeout();
     this.proto.write({
       kind: PacketKind.DoWork,
       input: work,
     });
   }
+
   /**
    * Sends new work to the working process.
    */
@@ -74,25 +89,57 @@ class Manager extends EventEmitter {
   }
 
   /**
-   * Kills the underlying process.
+   * Kills the underlying process and returns a promise that's resolved
+   * when the process exits. The process will be forcefully terminated
+   * if it does not terminate within the given interval.
    */
-  public kill(signal?: string) {
-    this.proc.kill(signal);
+  public kill(timeout: number = 2000): Promise<void> {
+    this.clearTimeout();
+    this.proc.kill('SIGINT');
+
+    // Ask the process politely to shut down, send SIGKILL if it doesn't
+    // clean up in a few seconds. This can happen if the event loop is
+    // blocked and someone was naughty and registered a SIGINT handler.
+    const killTimeout = setTimeout(() => this.proc.kill('SIGKILL'), 2000);
+    this.proc.removeAllListeners('error');
+    this.removeAllListeners('error');
+    this.on('error', () => { /* noop */ });
+    this.proc.kill();
+
+    return new Promise<void>(resolve => {
+      this.proc.once('exit', () => {
+        clearTimeout(killTimeout);
+        this.emit('close');
+        resolve();
+      });
+    });
+  }
+
+  private clearTimeout() {
+    clearTimeout(this.timeoutHandle);
+  }
+
+  private setTimeout() {
+    this.timeoutHandle = setTimeout(() => {
+      this.emit('timeout');
+      this.kill();
+    }, this.options.timeout);
   }
 
   /**
    * Creates a new Worker instance and returns a promise that resolves
    * when it has signaled it's ready.
    */
-  public static Spawn(target: string, exclude: string[]): Promise<Manager> {
+  public static Spawn(target: string, options: IManagerOptions): Promise<Manager> {
     return new Promise<Manager>((resolve, reject) => {
       const worker = new Manager(
         cp.spawn('node', [
           `${__dirname}/Worker.js`,
           target,
-          JSON.stringify(exclude),
+          JSON.stringify(options.exclude),
         ]),
         new Protocol(require('./fuzz')),
+        options,
       );
       worker.once('ready', () => resolve(worker));
       worker.once('error', (err: Error) => reject(err));
@@ -123,6 +170,12 @@ export interface IClusterOptions {
    * If set to true, stats will not be drawn and the process will not print anything.
    */
   quiet: boolean;
+
+  /**
+   * Length of time we kill worker processes after, given in milliseconds, if
+   * they don't produce results.
+   */
+  timeout: number;
 }
 
 /**
@@ -132,14 +185,16 @@ export class Cluster extends EventEmitter {
 
   private workers: Manager[] = [];
   private stats = new Stats();
-  private store = new Corpus();
+  private corpus: Corpus;
+  private serializer = new FileSerializer();
+  private active = true;
 
   constructor(private options: IClusterOptions) {
     super();
 
     this.stats.setWorkerProcesses(options.workers);
     if (!options.quiet) {
-      new BlessedRenderer().attach(this.stats);
+      new BlessedRenderer().attach(this.stats, () => this.shutdown());
     }
 
     this.on('info', (message: string) => this.stats.log(message));
@@ -156,21 +211,47 @@ export class Cluster extends EventEmitter {
     }
 
     this.emit('info', `Spinning up ${this.options.workers} workers`);
+    process.once('SIGINT', () => this.shutdown());
+    process.once('SIGTERM', () => this.shutdown());
 
-    const todo = [];
+    const todo: Promise<Manager>[] = [];
     for (let i = 0; i < this.options.workers; i += 1) {
-      todo.push(Manager.Spawn(
-        this.options.target,
-        this.options.exclude,
-      ));
+      todo.push(this.spawn());
     }
 
-    Promise.all(todo)
+    this.serializer.loadCorpus()
+      .then(corpus => {
+        this.corpus = corpus;
+        return Promise.all(todo);
+      })
       .then(workers => {
         this.workers = workers;
         workers.forEach((worker, i) => this.monitorWorker(worker, i));
         this.emit('info', `Workers ready, initializing fuzzing...`);
       });
+  }
+
+  /**
+   * Stops the server.
+   */
+  public shutdown() {
+    this.emit('info', 'Shutting down...');
+    this.active = false;
+    Promise.all(
+      this.workers
+        .filter(Boolean)
+        .map(worker => worker.kill())
+        .concat(this.serializer.storeCorpus(this.corpus)),
+    ).then(() => {
+      process.exit(0);
+    });
+  }
+
+  private spawn(): Promise<Manager> {
+    return Manager.Spawn(
+      this.options.target,
+      { exclude: this.options.exclude, timeout: this.options.timeout },
+    );
   }
 
   /**
@@ -201,7 +282,7 @@ export class Cluster extends EventEmitter {
     let lastInput: Input;
     let lastWork: Buffer;
     const sendNextPacket = () => {
-      lastInput = this.store.pickWeighted();
+      lastInput = this.corpus.pickWeighted();
       lastWork = lastInput.mutate();
       worker.send(lastWork);
     };
@@ -210,25 +291,44 @@ export class Cluster extends EventEmitter {
       this.stats.log(`Worker #${index}: ${line}`);
     });
 
+    worker.on('timeout', () => {
+      this.serializer.storeTimeout(lastWork);
+    });
+
     worker.on('workSummary', (result: IWorkSummary) => {
+      if (!this.active) {
+        return;
+      }
+
       const next = new Input(lastWork, lastInput.depth + 1, result);
       this.stats.recordExec(index);
-      if (!this.store.isInterestedIn(next)) {
+      if (!this.corpus.isInterestedIn(next)) {
         return sendNextPacket();
       }
 
       worker.requestCoverage(coverage => {
-        this.store.put(next);
-        this.stats.recordCoverageBranches(this.store.size());
+        if (!this.active) {
+          return;
+        }
+
+        this.corpus.put(next);
+        this.stats.recordCoverageBranches(this.corpus.size());
+        if (result.error) {
+          this.serializer.storeCrasher(next);
+        }
+
         sendNextPacket();
       });
     });
 
-    worker.on('error', (err: Error) => {
+    worker.once('error', (err: Error) => {
+      if (!this.active) {
+        return;
+      }
+
       this.emit('warn', `Worker ${index} crashed with error: ${err.stack || err}`);
       worker.kill();
-      worker.removeAllListeners();
-      Manager.Spawn(this.options.target, this.options.exclude).then(next => {
+      this.spawn().then(next => {
         this.workers[index] = next;
         this.monitorWorker(next, index);
       });

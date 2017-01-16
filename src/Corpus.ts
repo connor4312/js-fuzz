@@ -12,7 +12,7 @@ export class Input {
   private static maxScore = 100;
 
   constructor(
-    private input: Buffer,
+    public readonly input: Buffer,
     public readonly depth: number,
     public readonly summary: IWorkSummary,
   ) {}
@@ -37,6 +37,18 @@ export class Input {
     }
 
     return output;
+  }
+
+  /**
+   * Serializes an input into a string.
+   */
+  public serialize(): string {
+    return JSON.stringify({
+      input: this.input.toString('hex'),
+      depth: this.depth,
+      summary: this.summary,
+      $isJsFuzz: true,
+    });
   }
 
   /**
@@ -104,6 +116,22 @@ export class Input {
 
     return Math.min(Input.maxScore, Math.max(Input.minScore, score));
   }
+
+  /**
+   * Deserializes the input string to a qualified Input object
+   */
+  public static Deserialize(input: string): Input {
+    const parsed = JSON.parse(input);
+    if (!parsed.$isJsFuzz) {
+      throw new SyntaxError('The provided packet is not a js-fuzz input');
+    }
+
+    return new Input(
+      Buffer.from(parsed.input, 'hex'),
+      parsed.depth,
+      parsed.summary,
+    );
+  }
 }
 
 const zeroInput = new Input(
@@ -167,6 +195,13 @@ export class Corpus {
     }
 
     return running[i].input;
+  }
+
+  /**
+   * Returns all inputs stored in the corpus.
+   */
+  public getAllInputs(): Input[] {
+    return this.runningScore.map(r => r.input);
   }
 
   /**

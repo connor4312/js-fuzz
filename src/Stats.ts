@@ -213,11 +213,11 @@ export class BlessedRenderer {
     }),
   };
 
-  public attach(stats: Stats) {
+  public attach(stats: Stats, onExit: () => void) {
     this.stats = stats;
     stats.on('log', (msg: string) => this.panels.log.log(msg));
     stats.on('draw', () => this.redraw());
-    this.screen.key(['escape', 'q', 'C-c', 'enter'], () => process.exit(0));
+    this.screen.key(['escape', 'q', 'C-c', 'enter'], onExit);
     this.screen.render();
   }
 
