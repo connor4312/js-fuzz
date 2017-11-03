@@ -1,5 +1,5 @@
 import { createHash } from 'crypto';
-import { existsSync, mkdirSync, readdir, readFile, writeFile } from 'fs';
+import { existsSync, mkdirSync, readdir, readFile, writeFile } from 'graceful-fs';
 
 import { Corpus, Input } from './Corpus';
 import { PacketKind, WorkResult } from './Protocol';
