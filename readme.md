@@ -18,8 +18,8 @@ exports.fuzz = input => {
 
   let isPlainJSON = true
   let isJSON5 = true
-  try { JSON.parse(input) } catch () { isPlainJSON = false }
-  try { JSON5.parse(input) } catch () { isJSON5 = false }
+  try { JSON.parse(input) } catch (e) { isPlainJSON = false }
+  try { JSON5.parse(input) } catch (e) { isJSON5 = false }
 
   // We catch and thrown errors and mark them as failures
   if (isPlainJSON && !isJSON5) {
