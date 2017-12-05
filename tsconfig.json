@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "sourceMap": true,
     "allowSyntheticDefaultImports": true,
     "noImplicitAny": true,
     "declaration": false,
