@@ -35,6 +35,12 @@ const argv = require('yargs')
       default: '100ms',
       describe: 'Duration we wait before failing (timing out) test input.',
     },
+    s: {
+      alias: 'stats',
+      type: 'boolean',
+      default: false,
+      describe: 'Output periodic stats',
+    },
   })
   .argv
 
@@ -44,6 +50,7 @@ const c = new Cluster({
   workers: argv.workers,
   quiet: argv.quiet,
   timeout: parseDuration(argv.timeout),
+  stats: argv.stats,
 })
 
 if (argv.quiet) {

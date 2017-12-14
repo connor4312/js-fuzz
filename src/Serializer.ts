@@ -82,7 +82,7 @@ export class FileSerializer implements ISerializer {
 
   public storeCorpus(corpus: Corpus): Promise<void> {
     return Promise.all(
-      corpus
+      corpus && corpus.getAllInputs && corpus
         .getAllInputs()
         .map(input => {
           return writeFileAsync(

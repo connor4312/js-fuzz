@@ -53,3 +53,4 @@ jspm_packages
 # for now, ignore the demo
 /demo
 /lib
+fuzz-output

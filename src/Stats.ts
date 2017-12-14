@@ -4,6 +4,9 @@ const prettyMs = require('pretty-ms');
 const blessed = require('blessed');
 const contrib = require('blessed-contrib');
 const filesize = require('filesize');
+const fs = require('fs');
+
+const UPDATE_STATS_EVENT = 'update stats';
 
 interface ISeries {
   x: number[];
@@ -52,7 +55,7 @@ export class Stats extends EventEmitter {
   }
 
   private shiftSeries() {
-    this.emit('draw');
+    this.emit(UPDATE_STATS_EVENT);
     this.execsSeries.unshift([]);
     this.execsSeries.pop();
     this.coverSeries.unshift(this.coverSeries[0]);
@@ -173,6 +176,26 @@ export class Stats extends EventEmitter {
   }
 }
 
+export class StatsWriter {
+
+  private filename: string;
+
+  constructor(private stats: Stats,
+    private onExit: () => void,
+    filename?: string
+  ){
+    stats.on(UPDATE_STATS_EVENT, () => this.writeFile());
+    this.filename = filename || 'exec-stats'
+  }
+
+  private writeFile() {
+    const exec = this.stats.getExecsPerSecond();
+    const uptime = prettyMs(this.stats.getUptime());
+    fs.appendFile(`fuzz-output/${this.filename}`, `${uptime}:${exec}\n`,
+      (err: Error) => {});
+  }
+}
+
 export class BlessedRenderer {
 
   private stats: Stats;
@@ -215,11 +238,12 @@ export class BlessedRenderer {
 
   public attach(stats: Stats, onExit: () => void) {
     this.stats = stats;
-    stats.on('log', (msg: string) => this.panels.log.log(msg));
-    stats.on('draw', () => this.redraw());
+    stats.on('log', (msg: string) => this.panels.log.log(String(msg)));
+    stats.on(UPDATE_STATS_EVENT, () => this.redraw());
     this.screen.key(['escape', 'q', 'C-c', 'enter'], onExit);
     this.screen.render();
   }
+
 
   private redraw() {
     const workers = this.stats.getWorkerProcesses();

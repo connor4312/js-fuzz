@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "sourceMap": true,
     "allowSyntheticDefaultImports": true,
     "noImplicitAny": true,
     "declaration": false,
@@ -17,6 +18,7 @@
   },
   "exclude": [
     "node_modules",
+    "example",
     "lib"
   ]
 }
