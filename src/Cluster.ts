@@ -10,7 +10,7 @@ import {
   Protocol,
 } from './Protocol';
 import { FileSerializer } from './Serializer';
-import { BlessedRenderer, Stats } from './Stats';
+import { BlessedRenderer, Stats, StatsWriter } from './Stats';
 
 const split = require('split');
 
@@ -176,10 +176,17 @@ export interface IClusterOptions {
    * they don't produce results.
    */
   timeout: number;
+
+  /**
+   * Output periodic statistics to a file
+   */
+  stats:boolean
 }
 
 /**
  * The Cluster coordinates multiple child
+ *
+ * Manages
  */
 export class Cluster extends EventEmitter {
 
@@ -195,6 +202,9 @@ export class Cluster extends EventEmitter {
     this.stats.setWorkerProcesses(options.workers);
     if (!options.quiet) {
       new BlessedRenderer().attach(this.stats, () => this.shutdown());
+    }
+    if (options.stats) {
+      new StatsWriter(this.stats, () => this.shutdown());
     }
 
     this.on('info', (message: string) => this.stats.log(message));
