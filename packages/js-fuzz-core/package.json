@@ -1,5 +1,5 @@
 {
-  "name": "js-fuzz-core",
+  "name": "@c4312/js-fuzz-core",
   "version": "0.1.0",
   "description": "An AFL-inspired genetic fuzz tester for JavaScript (core library)",
   "keywords": [
@@ -15,9 +15,6 @@
   "homepage": "https://github.com/connor4312/js-fuzz/tree/master/packages/js-fuzz-core#readme",
   "license": "MIT",
   "main": "dist/index.js",
-  "files": [
-    "lib"
-  ],
   "dependencies": {
     "escodegen": "^1.11.1",
     "esprima": "^4.0.1",
@@ -25,6 +22,7 @@
     "filesize": "^4.1.2",
     "parse-duration": "^0.1.1",
     "protobufjs": "^6.8.8",
+    "rxjs": "^6.5.2",
     "split": "^1.0.1"
   },
   "devDependencies": {

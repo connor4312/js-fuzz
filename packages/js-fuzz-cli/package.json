@@ -1,5 +1,5 @@
 {
-  "name": "js-fuzz-cli",
+  "name": "@c4312/js-fuzz-cli",
   "version": "0.1.0",
   "description": "An AFL-inspired genetic fuzz tester for JavaScript (command line)",
   "keywords": [
@@ -20,13 +20,18 @@
   "license": "MIT",
   "main": "dist/index.js",
   "dependencies": {
-    "blessed": "^0.1.81",
+    "@c4312/js-fuzz-core": "*",
     "blessed-contrib": "^4.6.5",
+    "blessed": "^0.1.81",
+    "filesize": "^3.3.0",
+    "joi": "^14.3.1",
     "parse-duration": "^0.1.1",
     "pretty-ms": "^2.1.0",
-    "filesize": "^3.3.0",
-    "js-fuzz-core": "*",
-    "yargs": "^6.6.0"
+    "yargs": "^13.2.4"
+  },
+  "devDependencies": {
+    "@types/joi": "^14.3.3",
+    "@types/yargs": "^13.0.0"
   },
   "repository": {
     "type": "git",

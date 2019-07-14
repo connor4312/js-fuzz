@@ -1,16 +1,11 @@
 import * as cp from 'child_process';
 import { EventEmitter } from 'events';
+import { Subject, Observable } from 'rxjs';
 
 import { Corpus, Input } from './Corpus';
-import {
-  IModule,
-  ipcCall,
-  IWorkSummary,
-  PacketKind,
-  Protocol,
-} from './Protocol';
-import { FileSerializer } from './Serializer';
-import { Stats } from './Stats';
+import { ipcCall, IWorkSummary, PacketKind, Protocol } from './Protocol';
+import { ISerializer } from './Serializer';
+import { Stat, StatType } from './Stats';
 
 const split = require('split');
 
@@ -24,7 +19,6 @@ interface IManagerOptions {
  * fuzzing worker instance.
  */
 class Manager extends EventEmitter {
-
   private timeoutHandle!: NodeJS.Timer;
 
   constructor(
@@ -34,26 +28,24 @@ class Manager extends EventEmitter {
   ) {
     super();
 
-    proc.stderr
-      .pipe(split())
-      .on('data', (message: string) => this.emit('log', message));
+    proc.stderr.pipe(split()).on('data', (message: string) => this.emit('log', message));
 
     proto.attach(proc.stdout, proc.stdin);
 
     proto.on('message', (msg: ipcCall) => {
       switch (msg.kind) {
-      case PacketKind.Ready:
-        this.emit('ready');
-        break;
-      case PacketKind.WorkSummary:
-        this.clearTimeout();
-        this.emit('workSummary', msg);
-        break;
-      case PacketKind.WorkCoverage:
-        this.emit('workCoverage', msg.coverage);
-        break;
-      default:
-        throw new Error(`Unknown IPC call: ${msg.kind}`);
+        case PacketKind.Ready:
+          this.emit('ready');
+          break;
+        case PacketKind.WorkSummary:
+          this.clearTimeout();
+          this.emit('workSummary', msg);
+          break;
+        case PacketKind.WorkCoverage:
+          this.emit('workCoverage', msg.coverage);
+          break;
+        default:
+          throw new Error(`Unknown IPC call: ${msg.kind}`);
       }
     });
 
@@ -103,7 +95,9 @@ class Manager extends EventEmitter {
     const killTimeout = setTimeout(() => this.proc.kill('SIGKILL'), timeout);
     this.proc.removeAllListeners('error');
     this.removeAllListeners('error');
-    this.on('error', () => { /* noop */ });
+    this.on('error', () => {
+      /* noop */
+    });
     this.proc.kill();
 
     return new Promise<void>(resolve => {
@@ -133,11 +127,7 @@ class Manager extends EventEmitter {
   public static Spawn(target: string, options: IManagerOptions): Promise<Manager> {
     return new Promise<Manager>((resolve, reject) => {
       const worker = new Manager(
-        cp.spawn('node', [
-          `${__dirname}/Worker.js`,
-          target,
-          JSON.stringify(options.exclude),
-        ]),
+        cp.spawn('node', [`${__dirname}/Worker.js`, target, JSON.stringify(options.exclude)]),
         new Protocol(require('./fuzz')),
         options,
       );
@@ -181,41 +171,54 @@ export interface IClusterOptions {
 /**
  * The Cluster coordinates multiple child
  */
-export class Cluster extends EventEmitter {
-
+export class Cluster {
   private workers: Manager[] = [];
-  private stats = new Stats();
   private corpus!: Corpus;
-  private serializer = new FileSerializer();
   private active = true;
+  private statsSubject = new Subject<Stat>();
 
-  constructor(private options: IClusterOptions) {
-    super();
+  public get stats(): Observable<Stat> {
+    return this.statsSubject;
+  }
 
-    this.stats.setWorkerProcesses(options.workers);
-    this.on('info', (message: string) => this.stats.log(message));
-    this.on('warn', (message: string) => this.stats.log(message));
-    this.on('error', (message: string) => this.stats.log(message));
+  constructor(private readonly options: IClusterOptions, private readonly serializer: ISerializer) {
+    this.start();
+  }
+
+  /**
+   * Emits the given stat to the output stream.
+   */
+  private emitStat(stat: Stat) {
+    this.statsSubject.next(stat);
+  }
+
+  /**
+   * Emits the fatal error to the output stream.
+   */
+  private emitFatalError(error: Error | string) {
+    if (typeof error === 'string') {
+      error = new Error(error);
+    }
+
+    this.emitStat({
+      type: StatType.FatalError,
+      details: error.stack || error.message,
+      error: error,
+    });
   }
 
   /**
    * Boots the cluster.
    */
   public start() {
-    if (!this.verifyModuleLooksCorrect()) {
-      return;
-    }
-
-    this.emit('info', `Spinning up ${this.options.workers} workers`);
-    process.once('SIGINT', () => this.shutdown());
-    process.once('SIGTERM', () => this.shutdown());
-
+    this.emitStat({ type: StatType.SpinUp, workerCount: this.options.workers });
     const todo: Promise<Manager>[] = [];
     for (let i = 0; i < this.options.workers; i += 1) {
       todo.push(this.spawn());
     }
 
-    this.serializer.loadCorpus()
+    this.serializer
+      .loadCorpus()
       .then(corpus => {
         this.corpus = corpus;
         return Promise.all(todo);
@@ -223,52 +226,33 @@ export class Cluster extends EventEmitter {
       .then(workers => {
         this.workers = workers;
         workers.forEach((worker, i) => this.monitorWorker(worker, i));
-        this.emit('info', `Workers ready, initializing fuzzing...`);
-      });
+        this.emitStat({ type: StatType.WorkersReady });
+      })
+      .catch(() => {});
   }
 
   /**
    * Stops the server.
    */
-  public shutdown() {
-    this.emit('info', 'Shutting down...');
+  public shutdown(signal: string) {
+    this.emitStat({ type: StatType.ShutdownStart, signal });
     this.active = false;
+
     Promise.all(
       this.workers
         .filter(Boolean)
         .map(worker => worker.kill())
         .concat(this.serializer.storeCorpus(this.corpus)),
-    ).then(() => {
-      process.exit(0);
-    });
+    )
+      .then(() => this.emitStat({ type: StatType.ShutdownComplete }))
+      .catch(e => this.emitFatalError(e));
   }
 
   private spawn(): Promise<Manager> {
-    return Manager.Spawn(
-      this.options.target,
-      { exclude: this.options.exclude, timeout: this.options.timeout },
-    );
-  }
-
-  /**
-   * Does a quick smoke test to see if the module looks like it's set up
-   * correctly to fuzz, emitting an error and returning false if it isn't.
-   */
-  private verifyModuleLooksCorrect(): boolean {
-    let target: IModule;
-    try {
-      target = require(this.options.target); // tslint:disable-line
-    } catch (e) {
-      this.emit('error', e);
-      return false;
-    }
-
-    if (!target || typeof target.fuzz !== 'function') {
-      this.emit('error', new Error('Expected the file to export a fuzz() function, but it didn\'t!'));
-      return false;
-    }
-
-    return true;
+    return Manager.Spawn(this.options.target, {
+      exclude: this.options.exclude,
+      timeout: this.options.timeout,
+    });
   }
 
   /**
@@ -284,11 +268,12 @@ export class Cluster extends EventEmitter {
     };
 
     worker.on('log', (line: string) => {
-      this.stats.log(`Worker #${index}: ${line}`);
+      this.emitStat({ type: StatType.ProgramLogLine, worker: index, line });
     });
 
     worker.on('timeout', () => {
       this.serializer.storeTimeout(lastWork);
+      this.emitStat({ type: StatType.WorkerTimeout, worker: index });
     });
 
     worker.on('workSummary', (result: IWorkSummary) => {
@@ -297,7 +282,7 @@ export class Cluster extends EventEmitter {
       }
 
       const next = new Input(lastWork, lastInput.depth + 1, result);
-      this.stats.recordExec(index);
+      this.emitStat({ type: StatType.WorkerExecuted, summary: result });
       if (!this.corpus.isInterestedIn(next)) {
         return sendNextPacket();
       }
@@ -308,7 +293,7 @@ export class Cluster extends EventEmitter {
         }
 
         this.corpus.put(next);
-        this.stats.recordCoverageBranches(this.corpus.size());
+        this.emitStat({ type: StatType.CoverageUpdate, branches: this.corpus.size() });
         if (result.error) {
           this.serializer.storeCrasher(next);
         }
@@ -322,7 +307,7 @@ export class Cluster extends EventEmitter {
         return;
       }
 
-      this.emit('warn', `Worker ${index} crashed with error: ${err.stack || err}`);
+      this.emitStat({ type: StatType.WorkerErrored, error: err, worker: index });
       worker.kill();
       this.spawn().then(next => {
         this.workers[index] = next;

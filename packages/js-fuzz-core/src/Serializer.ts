@@ -13,7 +13,7 @@ export interface ISerializer {
   /**
    * Store the error that occurred as a result of the input.
    */
-  storeCrasher(input: Input, error: string): Promise<void>;
+  storeCrasher(input: Input): Promise<void>;
 
   /**
    * Serializes the corpus and saves it on the disk.

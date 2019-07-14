@@ -1,5 +1,5 @@
 {
-  "name": "js-fuzz",
+  "name": "@c4312/js-fuzz",
   "version": "0.1.0",
   "private": true,
   "main": "index.js",
@@ -9,16 +9,8 @@
     "fmt": "lerna run fmt --parallel",
     "postinstall": "lerna bootstrap"
   },
-  "repository": {
-    "type": "git",
-    "url": "git://github.com/connor4312/js-fuzz.git"
-  },
   "author": "Connor Peet <connor@peet.io>",
   "license": "MIT",
-  "preferGlobal": true,
-  "bin": {
-    "js-fuzz": "./bin/js-fuzz"
-  },
   "devDependencies": {
     "@types/chai": "^4.1.7",
     "@types/mocha": "^5.2.7",
@@ -33,19 +25,6 @@
     "tslint-config-prettier": "^1.18.0",
     "typescript": "^3.5.3"
   },
-  "bugs": {
-    "url": "https://github.com/connor4312/js-fuzz/issues"
-  },
-  "homepage": "https://github.com/connor4312/js-fuzz#readme",
-  "keywords": [
-    "afl",
-    "american",
-    "fuzzy",
-    "lop",
-    "fuzzer",
-    "tester",
-    "fuzz"
-  ],
   "prettier": {
     "trailingComma": "all",
     "singleQuote": true,

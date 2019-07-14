@@ -1,169 +1,110 @@
-import { EventEmitter } from 'events';
+import { IWorkSummary } from './Protocol';
 
-interface ISeries {
-  x: number[];
-  y: number[];
+export const enum StatType {
+  FatalError = 'fatalError',
+  SpinUp = 'spinUp',
+  WorkersReady = 'workersReady',
+  ProgramLogLine = 'programLogLine',
+  ShutdownStart = 'shutdownStart',
+  ShutdownComplete = 'shutdownComplete',
+  WorkerTimeout = 'workerTimeout',
+  WorkerExecuted = 'workerExecuted',
+  WorkerErrored = 'workerErrored',
+  CoverageUpdate = 'coverageUpdate',
 }
 
 /**
- * Returns an array of length `count` filled with the value.
+ * Indicates a fatal error occurred that prevents us from proceeding further.
  */
-function fill<T>(count: number, item: any): T[] {
-  const output: T[] = [];
-  for (let i = 0; i < count; i += 1) {
-    if (typeof item === 'function') {
-      output.push(item());
-    } else {
-      output.push(item);
-    }
-  }
-
-  return output;
+export interface IFatalError {
+  type: StatType.FatalError;
+  error?: Error;
+  details: string;
 }
 
-export class Stats extends EventEmitter {
-
-  private static drawInterval = 1000;
-
-  private workerProcesses = 0;
-  private execs = 0;
-
-  private startedAt = Date.now();
-  private execsSeries: number[][];
-  private coverSeries: number[];
-
-  /**
-   * Creates a new stats instance, specifying the interval over which data
-   * will be kept.
-   */
-  constructor(interval: number = 30 * 1000) {
-    super();
-
-    const count = Math.round(interval / Stats.drawInterval);
-    this.execsSeries = fill(count, () => []);
-    this.coverSeries = fill(count, 0);
-
-    setInterval(() => this.shiftSeries(), Stats.drawInterval);
-  }
-
-  private shiftSeries() {
-    this.emit('draw');
-    this.execsSeries.unshift([]);
-    this.execsSeries.pop();
-    this.coverSeries.unshift(this.coverSeries[0]);
-    this.coverSeries.pop();
-  }
-
-  /**
-   * Increments the number of executions that have been run.
-   */
-  public recordExec(fromWorker: number) {
-    this.execs += 1;
-    this.execsSeries[0][fromWorker] = (this.execsSeries[0][fromWorker] || 0) + 1;
-  }
-
-  /**
-   * Records the number of covered branches.
-   */
-  public recordCoverageBranches(count: number) {
-    this.coverSeries[0] = count;
-  }
-
-  /**
-   * Writes a log message to the output.
-   */
-  public log(text: string) {
-    this.emit('log', text);
-  }
-
-  /**
-   * Sets the number of worker processes.
-   */
-  public setWorkerProcesses(amt: number) {
-    this.workerProcesses = amt;
-  }
-
-  /**
-   * Returns the number of worker processes.
-   */
-  public getWorkerProcesses(): number {
-    return this.workerProcesses;
-  }
-
-  /**
-   * Returns the number of executions over the lifetime of the process.
-   */
-  public getTotalExecs() {
-    return this.execs;
-  }
-
-  /**
-   * Returns the number of executions per second, grouped by time.
-   */
-  public getExecPlot(): ISeries {
-    const output: ISeries = { x: [], y: [] };
-    for (let i = this.execsSeries.length - 1; i >= 0; i -= 1) {
-      output.x.push(i - Stats.drawInterval);
-
-      let total = 0;
-      for (let k = 0; k < this.execsSeries[i].length; k += 1) {
-        total += this.execsSeries[i][k] || 0;
-      }
-      output.y.push(total);
-    }
-    return output;
-  }
-
-  /**
-   * Returns branch coverage over time.
-   */
-  public getCoverPlot(): ISeries {
-    const output: ISeries = { x: [], y: [] };
-    for (let i = this.coverSeries.length - 1; i >= 0; i -= 1) {
-      output.x.push(i - Stats.drawInterval);
-      output.y.push(this.coverSeries[i]);
-    }
-
-    return output;
-  }
-
-  /**
-   * Returns the number of executions per `scale` seconds for a single worker.
-   * Scale must be a multiple of the collection duration over the draw interval.
-   */
-  public getWorkerExecPlot(worker: number, scale: number = 1): number[] {
-    const output = [];
-    for (let i = this.execsSeries.length - 1; i >= 0; i -= 1) {
-      let sum = 0;
-      for (const end = i - scale; i > end; i -= 1) {
-        sum += this.execsSeries[i][worker] || 0;
-      }
-
-      output.push(sum);
-    }
-
-    return output;
-  }
-
-  /**
-   * Returns the number of unique code paths/branches hit.
-   */
-  public getBranchCount(): number {
-    return this.coverSeries[0];
-  }
-
-  /**
-   * Returns the number of times code was executed in the last second.
-   */
-  public getExecsPerSecond(): number {
-    return this.execsSeries[0].reduce((prev, x) => prev + (x || 0), 0);
-  }
-
-  /**
-   * Returns how long the process has been running, in milliseconds.
-   * @return {number} [description]
-   */
-  public getUptime(): number {
-    return Date.now() - this.startedAt;
-  }
+/**
+ * Indicates that the cluster is spinning up.
+ */
+export interface ISpinUp {
+  type: StatType.SpinUp;
+  workerCount: number;
 }
+
+/**
+ * Indicates that all workers are ready for fuzzing.
+ */
+export interface IWorkersReady {
+  type: StatType.WorkersReady;
+}
+
+/**
+ * Indicates that a shutdown signal was received.
+ */
+export interface IShutdownStart {
+  type: StatType.ShutdownStart;
+  signal?: string;
+}
+
+/**
+ * Indicates that all workers and resources have shut down.
+ */
+export interface IShutdownComplete {
+  type: StatType.ShutdownComplete;
+}
+
+/**
+ * Indicates that a worker timed out while executing.
+ */
+export interface IWorkerTimeout {
+  type: StatType.WorkerTimeout;
+  worker: number;
+}
+
+/**
+ * Indicates that a worker completed work on a given input.
+ */
+export interface IWorkerExecuted {
+  type: StatType.WorkerExecuted;
+  summary: IWorkSummary;
+}
+
+/**
+ * Indicates that a worker errored or crashed. This is _not_ expected.
+ */
+export interface IWorkerUnhandledError {
+  type: StatType.WorkerErrored;
+  worker: number;
+  error: Error;
+}
+
+/**
+ * Emitted when we update our coverage count
+ */
+export interface ICoverageUpdate {
+  type: StatType.CoverageUpdate;
+  branches: number;
+}
+
+/**
+ * Emitted when the user program writes a log message.
+ */
+export interface IProgramLogLine {
+  type: StatType.ProgramLogLine;
+  worker: number;
+  line: string;
+}
+
+/**
+ * Type emitted from the Cluster when it has information to report.
+ */
+export type Stat =
+  | IFatalError
+  | ISpinUp
+  | IWorkersReady
+  | IShutdownStart
+  | IShutdownComplete
+  | IProgramLogLine
+  | ICoverageUpdate
+  | IWorkerUnhandledError
+  | IWorkerExecuted
+  | IWorkerTimeout;

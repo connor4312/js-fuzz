@@ -51,9 +51,9 @@ jspm_packages
 .yarn-integrity
 
 # for now, ignore the demo
-/demo
+packages/js-fuzz-cli/demo
 
 **/dist
 **/coverage
-/fuzz-output
+**/fuzz-output
 /.vscode
