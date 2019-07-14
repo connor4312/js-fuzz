@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "forceConsistentCasingInFileNames": true,
+    "sourceMap": true,
+    "declaration": true,
+    "noImplicitReturns": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "moduleResolution": "node",
+    "newLine": "LF",
+    "module": "commonjs",
+    "target": "es2016",
+    "lib": ["es6", "es7"],
+    "types": [
+      "node",
+      "mocha"
+    ]
+  }
+}

@@ -1,14 +1,13 @@
 {
   "name": "js-fuzz",
   "version": "0.1.0",
-  "description": "An AFL-inspired genetic fuzz tester for JavaScript",
+  "private": true,
   "main": "index.js",
   "scripts": {
-    "build:dist": "npm run -s clean && tsc && pbjs src/fuzz.proto -t static-module > lib/src/fuzz.js",
-    "clean": "rimraf coverage doc lib",
-    "test": "npm-run-all --silent --parallel test:lint test:unit",
-    "test:lint": "npm run -s clean && tslint --type-check --project tsconfig.json '{src,test}/**/*.ts'",
-    "test:unit": "mocha --compilers ts:ts-node/register test/*.test.ts"
+    "build": "lerna run build",
+    "test": "lerna run test --stream --concurrency 1",
+    "fmt": "lerna run fmt --parallel",
+    "postinstall": "lerna bootstrap"
   },
   "repository": {
     "type": "git",
@@ -17,37 +16,22 @@
   "author": "Connor Peet <connor@peet.io>",
   "license": "MIT",
   "preferGlobal": true,
-  "dependencies": {
-    "blessed": "^0.1.81",
-    "blessed-contrib": "^4.6.5",
-    "escodegen": "^1.8.1",
-    "esprima": "^3.1.3",
-    "estraverse": "^4.2.0",
-    "filesize": "^3.3.0",
-    "parse-duration": "^0.1.1",
-    "pretty-ms": "^2.1.0",
-    "protobufjs": "^6.4.6",
-    "split": "^1.0.0",
-    "yargs": "^6.6.0"
-  },
   "bin": {
     "js-fuzz": "./bin/js-fuzz"
   },
   "devDependencies": {
-    "@types/chai": "^3.4.34",
-    "@types/escodegen": "0.0.6",
-    "@types/esprima": "^2.1.33",
-    "@types/estraverse": "0.0.6",
-    "@types/mocha": "^2.2.37",
-    "@types/node": "^7.0.0",
-    "chai": "^3.5.0",
-    "mocha": "^3.2.0",
-    "npm-run-all": "^4.0.0",
-    "rimraf": "^2.5.4",
-    "ts-node": "^2.0.0",
-    "tslint": "^4.3.1",
-    "tslint-microsoft-contrib": "^4.0.0",
-    "typescript": "^2.1.5"
+    "@types/chai": "^4.1.7",
+    "@types/mocha": "^5.2.7",
+    "@types/node": "^12.6.2",
+    "chai": "^4.2.0",
+    "lerna": "^3.15.0",
+    "mocha": "^6.1.4",
+    "npm-run-all": "^4.1.5",
+    "rimraf": "^2.6.3",
+    "ts-node": "^8.3.0",
+    "tslint": "^5.18.0",
+    "tslint-config-prettier": "^1.18.0",
+    "typescript": "^3.5.3"
   },
   "bugs": {
     "url": "https://github.com/connor4312/js-fuzz/issues"
@@ -61,5 +45,11 @@
     "fuzzer",
     "tester",
     "fuzz"
-  ]
+  ],
+  "prettier": {
+    "trailingComma": "all",
+    "singleQuote": true,
+    "printWidth": 100,
+    "tabWidth": 2
+  }
 }

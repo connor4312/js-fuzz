@@ -1,5 +1,5 @@
 import { generate } from 'escodegen';
-import { parse } from 'esprima';
+import { parseScript } from 'esprima';
 import * as ESTrasverse from 'estraverse';
 import {
   BlockStatement,
@@ -19,18 +19,18 @@ export interface IInstrumenterOptions {
    * result in an increased number of cache misses. Defaults to
    * 16 (a 64kb table) as AFL.
    */
-  hashBits?: number;
+  hashBits: number;
 
   /**
    * Global hash table name, defaults to __coverage__ a la Istanbul.
    */
-  hashName?: string;
+  hashName: string;
 
   /**
    * Whether to use deterministic keys, this should be used ONLY for testing
    * and will seriously screw up the fuzzer if used in production.
    */
-  deterministicKeys?: boolean;
+  deterministicKeys: boolean;
 }
 
 /**
@@ -106,19 +106,20 @@ export class Instrumenter {
   private deterministCounter = 0;
   private options: IInstrumenterOptions;
 
-  constructor(options?: IInstrumenterOptions) {
-    this.options = Object.assign({
+  constructor(options?: Partial<IInstrumenterOptions>) {
+    this.options = {
       hashBits: 16,
       hashName: '__coverage__',
       deterministicKeys: false,
-    }, options);
+      ...options
+    };
   }
 
   /**
    * Instruments the provided code with branch analysis instructions.
    */
   public instrument(code: string): string {
-    return generate(this.walk(parse(code)));
+    return generate(this.walk(parseScript(code)));
   }
 
   /**

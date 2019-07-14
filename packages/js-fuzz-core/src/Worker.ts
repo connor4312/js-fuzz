@@ -39,7 +39,7 @@ export class Worker {
   /**
    * The module to be put under fuzzing
    */
-  private target: IModule;
+  private target!: IModule;
   /**
    * List of modules to exclude from code coverage analysis.
    */
@@ -48,10 +48,10 @@ export class Worker {
   /**
    * Instrumenter used for the worker code's code.
    */
-  private instrumenter: Instrumenter;
+  private instrumenter!: Instrumenter;
 
-  private lastCoverage: Buffer;
-  private proto: Protocol;
+  private lastCoverage!: Buffer;
+  private proto!: Protocol;
 
   constructor(private targetPath: string, exclude: string[]) {
     this.excludes = exclude.map(e => new RegExp(e));
@@ -97,10 +97,10 @@ export class Worker {
 
   private runFuzz(
     input: Buffer,
-    callback: (err: any, res?: WorkResult) => void,
+    callback: (err: any, res: WorkResult) => void,
   ): void {
     let called = false;
-    const handler = (err: any, res?: WorkResult) => {
+    const handler = (err: any, res: WorkResult) => {
       if (called) {
         return;
       }
@@ -110,17 +110,17 @@ export class Worker {
       callback(err, res);
     };
 
-    process.once('uncaughtException', handler);
+    process.once('uncaughtException' as any, handler);
 
     try {
       this.runFuzzInner(input, handler);
     } catch (e) {
-      handler(e);
+      handler(e, null as any);
     }
   }
   private runFuzzInner(
     input: Buffer,
-    callback: (err: any, res?: WorkResult) => void,
+    callback: (err: any, res: WorkResult) => void,
   ): void {
     if (this.target.fuzz.length > 1) {
       this.target.fuzz(input, callback);
@@ -130,7 +130,7 @@ export class Worker {
     const out = this.target.fuzz(input);
     if (out && typeof out.then === 'function') {
       out.then(res => callback(null, res))
-        .catch(err => callback(err));
+        .catch(err => callback(err, null as any));
       return;
     }
 

@@ -1,0 +1,5 @@
+--watch-extensions ts
+--require source-map-support/register
+--require ts-node/register
+--recursive
+src/**/*.test.ts

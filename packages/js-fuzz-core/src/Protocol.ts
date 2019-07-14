@@ -157,9 +157,7 @@ export type ipcCall = IWorkSummary | IDoWork | IReadyCall | IWorkCoverage | IReq
  * readable and writable streams. Each message is length-prefix with a varint.
  */
 export class Protocol extends EventEmitter {
-
-  private input: NodeJS.ReadableStream;
-  private output: NodeJS.WritableStream;
+  private output!: NodeJS.WritableStream;
   private messages: { [name: string]: protobufjs.Type };
   private inputBuffer = new RWBuffer();
 
@@ -172,7 +170,6 @@ export class Protocol extends EventEmitter {
    * Attaches an ipc reader/writer to the streams.
    */
   public attach(input: NodeJS.ReadableStream, output: NodeJS.WritableStream) {
-    this.input = input;
     this.output = output;
 
     input.on('data', (data: Buffer) => {
@@ -234,7 +231,7 @@ export class Protocol extends EventEmitter {
       }
 
       this.inputBuffer.advanceRead(-1);
-      return; // rather naive to buffer infinitely,
+      return null; // rather naive to buffer infinitely,
     }
 
     this.inputBuffer.advanceRead(reader.pos);

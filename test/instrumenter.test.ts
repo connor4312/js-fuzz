@@ -1,5 +1,5 @@
 import { expect } from 'chai';
-import { Instrumenter } from '../src/instrumenter';
+import { Instrumenter } from '../packages/js-fuzz-core/src/Instrumenter';
 
 import util = require('./util');
 

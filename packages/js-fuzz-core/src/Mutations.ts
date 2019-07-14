@@ -44,7 +44,7 @@ interface IMutator {
    * Runs the mutation on the buffer, returning a new buffer. If the
    * mutation can't be run right now, this will return null.
    */
-  (input: Buffer): Buffer;
+  (input: Buffer): Buffer | null;
 }
 
 /**
@@ -54,7 +54,7 @@ interface IMutator {
  * buffers do not allow resizing.
  */
 
-export function rangeRemoverMutator(buffer: Buffer): Buffer {
+export function rangeRemoverMutator(buffer: Buffer): Buffer | null {
   if (buffer.length < 1) {
     return null;
   }
@@ -67,7 +67,7 @@ export function rangeRemoverMutator(buffer: Buffer): Buffer {
   ]);
 }
 
-export function rangeInserterMutator(buffer: Buffer): Buffer {
+export function rangeInserterMutator(buffer: Buffer): Buffer | null {
   const start = randn(buffer.length + 1);
 
   return Buffer.concat([
@@ -77,7 +77,7 @@ export function rangeInserterMutator(buffer: Buffer): Buffer {
   ]);
 }
 
-export function rangeDuplicatorMutator(buffer: Buffer): Buffer {
+export function rangeDuplicatorMutator(buffer: Buffer): Buffer | null {
   if (buffer.length < 2) {
     return null;
   }
@@ -97,7 +97,7 @@ export function rangeDuplicatorMutator(buffer: Buffer): Buffer {
   ]);
 }
 
-export function rangeCopyMutator(buffer: Buffer): Buffer {
+export function rangeCopyMutator(buffer: Buffer): Buffer | null {
   if (buffer.length < 2) {
     return null;
   }
@@ -114,7 +114,7 @@ export function rangeCopyMutator(buffer: Buffer): Buffer {
   return buffer;
 }
 
-export function bitFlipMutator(buffer: Buffer): Buffer {
+export function bitFlipMutator(buffer: Buffer): Buffer | null {
   if (buffer.length < 1) {
     return null;
   }
@@ -124,7 +124,7 @@ export function bitFlipMutator(buffer: Buffer): Buffer {
   return buffer;
 }
 
-export function randomByteMutator(buffer: Buffer): Buffer {
+export function randomByteMutator(buffer: Buffer): Buffer | null {
   if (buffer.length < 1) {
     return null;
   }
@@ -134,7 +134,7 @@ export function randomByteMutator(buffer: Buffer): Buffer {
   return buffer;
 }
 
-export function byteSwapMutator(buffer: Buffer): Buffer {
+export function byteSwapMutator(buffer: Buffer): Buffer | null {
   if (buffer.length < 2) {
     return null;
   }
@@ -150,7 +150,7 @@ export function byteSwapMutator(buffer: Buffer): Buffer {
   return buffer;
 }
 
-export function uint8AddSubMutator(buffer: Buffer): Buffer {
+export function uint8AddSubMutator(buffer: Buffer): Buffer | null {
   if (buffer.length < 1) {
     return null;
   }
@@ -160,7 +160,7 @@ export function uint8AddSubMutator(buffer: Buffer): Buffer {
   return buffer;
 }
 
-export function uint16AddSubMutator(buffer: Buffer): Buffer {
+export function uint16AddSubMutator(buffer: Buffer): Buffer | null {
   if (buffer.length < 2) {
     return null;
   }
@@ -177,7 +177,7 @@ export function uint16AddSubMutator(buffer: Buffer): Buffer {
   return buffer;
 }
 
-export function uint32AddSubMutator(buffer: Buffer): Buffer {
+export function uint32AddSubMutator(buffer: Buffer): Buffer | null {
   if (buffer.length < 4) {
     return null;
   }

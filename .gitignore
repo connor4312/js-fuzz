@@ -52,4 +52,8 @@ jspm_packages
 
 # for now, ignore the demo
 /demo
-/lib
+
+**/dist
+**/coverage
+/fuzz-output
+/.vscode

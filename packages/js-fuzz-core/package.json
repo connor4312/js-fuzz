@@ -1,0 +1,50 @@
+{
+  "name": "js-fuzz-core",
+  "version": "0.1.0",
+  "description": "An AFL-inspired genetic fuzz tester for JavaScript (core library)",
+  "keywords": [
+    "afl",
+    "american",
+    "fuzzy",
+    "lop",
+    "fuzzer",
+    "tester",
+    "fuzz"
+  ],
+  "author": "Connor Peet <connor@peet.io>",
+  "homepage": "https://github.com/connor4312/js-fuzz/tree/master/packages/js-fuzz-core#readme",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "files": [
+    "lib"
+  ],
+  "dependencies": {
+    "escodegen": "^1.11.1",
+    "esprima": "^4.0.1",
+    "estraverse": "^4.2.0",
+    "filesize": "^4.1.2",
+    "parse-duration": "^0.1.1",
+    "protobufjs": "^6.8.8",
+    "split": "^1.0.1"
+  },
+  "devDependencies": {
+    "@types/escodegen": "^0.0.6",
+    "@types/esprima": "^4.0.2",
+    "@types/estraverse": "^0.0.6"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/connor4312/js-fuzz.git"
+  },
+  "scripts": {
+    "prepare": "npm run build",
+    "build": "npm run clean && node-ex tsc && pbjs src/fuzz.proto -t static-module > dist/fuzz.js",
+    "clean": "node-ex rimraf coverage doc lib",
+    "test": "node-ex npm-run-all --silent --parallel test:lint test:unit",
+    "test:lint": "node-ex tslint --type-check --project tsconfig.json '{src,test}/**/*.ts'",
+    "test:unit": "mocha --opts mocha.opts"
+  },
+  "bugs": {
+    "url": "https://github.com/connor4312/js-fuzz/issues"
+  }
+}

@@ -75,7 +75,7 @@ export class FileSerializer implements ISerializer {
   public storeCrasher(input: Input): Promise<void> {
     return this.storeCrasherFile(
       input.summary.hash,
-      input.summary.error,
+      input.summary.error!,
       input.input,
     );
   }

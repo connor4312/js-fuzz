@@ -152,7 +152,6 @@ const zeroInput = new Input(
  * check to see if a given buffer is in the store yet.
  */
 export class Corpus {
-
   private store: {
     [hash: string]: {
       input: Input,
@@ -163,7 +162,7 @@ export class Corpus {
   private runningScore: { runningScore: number, input: Input }[] = [];
   private totalExecutionTime = 0;
   private totalBranchCoverage = 0;
-  private totalScore = 0;
+  public totalScore = 0;
 
   /**
    * Returns if we're interested in getting a full summary report for the
@@ -228,7 +227,6 @@ export class Corpus {
       this.totalScore += delta;
     } else {
       index = running.length;
-      running.push(null);
       this.totalBranchCoverage += input.summary.coverageSize;
       this.totalExecutionTime += input.summary.runtime;
       this.totalScore += score;

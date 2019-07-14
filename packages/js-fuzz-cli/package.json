@@ -1,0 +1,46 @@
+{
+  "name": "js-fuzz-cli",
+  "version": "0.1.0",
+  "description": "An AFL-inspired genetic fuzz tester for JavaScript (command line)",
+  "keywords": [
+    "afl",
+    "american",
+    "fuzzy",
+    "lop",
+    "fuzzer",
+    "tester",
+    "fuzz"
+  ],
+  "preferGlobal": true,
+  "bin": {
+    "js-fuzz": "dist/index.js"
+  },
+  "author": "Connor Peet <connor@peet.io>",
+  "homepage": "https://github.com/connor4312/js-fuzz/tree/master/packages/js-fuzz-cli#readme",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "dependencies": {
+    "blessed": "^0.1.81",
+    "blessed-contrib": "^4.6.5",
+    "parse-duration": "^0.1.1",
+    "pretty-ms": "^2.1.0",
+    "filesize": "^3.3.0",
+    "js-fuzz-core": "*",
+    "yargs": "^6.6.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/connor4312/js-fuzz.git"
+  },
+  "scripts": {
+    "prepare": "npm run build",
+    "build": "npm run clean && node-ex tsc",
+    "clean": "node-ex rimraf coverage doc lib",
+    "test": "node-ex npm-run-all --silent --parallel test:lint test:unit",
+    "test:lint": "node-ex tslint --type-check --project tsconfig.json '{src,test}/**/*.ts'",
+    "test:unit": "mocha --opts mocha.opts"
+  },
+  "bugs": {
+    "url": "https://github.com/connor4312/js-fuzz/issues"
+  }
+}

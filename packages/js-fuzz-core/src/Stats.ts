@@ -1,10 +1,5 @@
 import { EventEmitter } from 'events';
 
-const prettyMs = require('pretty-ms');
-const blessed = require('blessed');
-const contrib = require('blessed-contrib');
-const filesize = require('filesize');
-
 interface ISeries {
   x: number[];
   y: number[];
@@ -13,7 +8,7 @@ interface ISeries {
 /**
  * Returns an array of length `count` filled with the value.
  */
-function fill<T>(count: number, item: T | (() => T)): T[] {
+function fill<T>(count: number, item: any): T[] {
   const output: T[] = [];
   for (let i = 0; i < count; i += 1) {
     if (typeof item === 'function') {
@@ -41,7 +36,7 @@ export class Stats extends EventEmitter {
    * Creates a new stats instance, specifying the interval over which data
    * will be kept.
    */
-  constructor(private interval: number = 30 * 1000) {
+  constructor(interval: number = 30 * 1000) {
     super();
 
     const count = Math.round(interval / Stats.drawInterval);
@@ -170,78 +165,5 @@ export class Stats extends EventEmitter {
    */
   public getUptime(): number {
     return Date.now() - this.startedAt;
-  }
-}
-
-export class BlessedRenderer {
-
-  private stats: Stats;
-  private screen = blessed.screen();
-  private grid = new contrib.grid({ rows: 12, cols: 12, screen: this.screen });
-  private panels = {
-    stats: this.grid.set(0, 0, 3, 2, blessed.box, {
-      label: 'Status',
-      tags: true,
-    }),
-    log: this.grid.set(4, 2, 8, 10, contrib.log, {
-      fg: 'red',
-      selectedFg: 'white',
-      label: 'Crash Logs',
-    }),
-    execsOverallChart: this.grid.set(0, 2, 4, 5, contrib.line, {
-      label: 'Overall Throughput (execs/sec)',
-      style: {
-        line: 'yellow',
-        text: 'green',
-        baseline: 'black',
-      },
-      wholeNumbersOnly: true,
-    }),
-    coverageOverallChart: this.grid.set(0, 7, 4, 5, contrib.line, {
-      label: 'Branches Covered',
-      style: {
-        line: 'yellow',
-        text: 'green',
-        baseline: 'black',
-      },
-      wholeNumbersOnly: true,
-    }),
-    execsPerWorker: this.grid.set(3, 0, 9, 2, contrib.sparkline, {
-      label: 'Worker Throughput',
-      tags: true,
-      style: { fg: 'blue' },
-    }),
-  };
-
-  public attach(stats: Stats, onExit: () => void) {
-    this.stats = stats;
-    stats.on('log', (msg: string) => this.panels.log.log(msg));
-    stats.on('draw', () => this.redraw());
-    this.screen.key(['escape', 'q', 'C-c', 'enter'], onExit);
-    this.screen.render();
-  }
-
-  private redraw() {
-    const workers = this.stats.getWorkerProcesses();
-    this.panels.stats.setContent([
-      `{green-fg}Uptime{/green-fg}: ${prettyMs(this.stats.getUptime())}`,
-      `{green-fg}Worker Processes{/green-fg}: ${workers}`,
-      `{green-fg}Branches hit{/green-fg}: ${this.stats.getBranchCount()}`,
-      `{green-fg}Executions{/green-fg}: ${this.stats.getTotalExecs()}`,
-      `{green-fg}Executions/sec{/green-fg}: ${this.stats.getExecsPerSecond()}`,
-      `{green-fg}Heap Size{/green-fg}: ${filesize(process.memoryUsage().heapUsed)}`,
-    ].join('\n'));
-
-    const sparkColumns: string[] = [];
-    const sparkData: number[][] = [];
-    for (let i = 0; i < workers; i += 1) {
-      sparkColumns.push(`Worker ${i}`);
-      sparkData.push(this.stats.getWorkerExecPlot(i, 2));
-    }
-
-    this.panels.execsPerWorker.setData(sparkColumns, sparkData);
-    this.panels.execsOverallChart.setData([this.stats.getExecPlot()]);
-    this.panels.coverageOverallChart.setData([this.stats.getCoverPlot()]);
-    this.screen.render();
   }
 }

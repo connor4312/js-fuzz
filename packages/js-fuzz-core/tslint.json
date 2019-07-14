@@ -1,0 +1,4 @@
+{
+  "$schema": "http://json.schemastore.org/tslint",
+  "extends": ["../../etc/config/tslint.base.json"]
+}

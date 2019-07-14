@@ -10,7 +10,7 @@ import {
   Protocol,
 } from './Protocol';
 import { FileSerializer } from './Serializer';
-import { BlessedRenderer, Stats } from './Stats';
+import { Stats } from './Stats';
 
 const split = require('split');
 
@@ -25,7 +25,7 @@ interface IManagerOptions {
  */
 class Manager extends EventEmitter {
 
-  private timeoutHandle: NodeJS.Timer;
+  private timeoutHandle!: NodeJS.Timer;
 
   constructor(
     private proc: cp.ChildProcess,
@@ -100,7 +100,7 @@ class Manager extends EventEmitter {
     // Ask the process politely to shut down, send SIGKILL if it doesn't
     // clean up in a few seconds. This can happen if the event loop is
     // blocked and someone was naughty and registered a SIGINT handler.
-    const killTimeout = setTimeout(() => this.proc.kill('SIGKILL'), 2000);
+    const killTimeout = setTimeout(() => this.proc.kill('SIGKILL'), timeout);
     this.proc.removeAllListeners('error');
     this.removeAllListeners('error');
     this.on('error', () => { /* noop */ });
@@ -185,7 +185,7 @@ export class Cluster extends EventEmitter {
 
   private workers: Manager[] = [];
   private stats = new Stats();
-  private corpus: Corpus;
+  private corpus!: Corpus;
   private serializer = new FileSerializer();
   private active = true;
 
@@ -193,10 +193,6 @@ export class Cluster extends EventEmitter {
     super();
 
     this.stats.setWorkerProcesses(options.workers);
-    if (!options.quiet) {
-      new BlessedRenderer().attach(this.stats, () => this.shutdown());
-    }
-
     this.on('info', (message: string) => this.stats.log(message));
     this.on('warn', (message: string) => this.stats.log(message));
     this.on('error', (message: string) => this.stats.log(message));
@@ -306,7 +302,7 @@ export class Cluster extends EventEmitter {
         return sendNextPacket();
       }
 
-      worker.requestCoverage(coverage => {
+      worker.requestCoverage(() => {
         if (!this.active) {
           return;
         }

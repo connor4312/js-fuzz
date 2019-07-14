@@ -36,7 +36,7 @@ const argv = require('yargs')
       describe: 'Duration we wait before failing (timing out) test input.',
     },
   })
-  .argv
+  .argv;
 
 const c = new Cluster({
   target: path.resolve(process.cwd(), argv._[0]),
