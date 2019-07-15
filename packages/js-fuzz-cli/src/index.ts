@@ -11,6 +11,14 @@ import { cpus } from 'os';
 import { readFileSync } from 'fs';
 import { ReporterType, reporters } from './reporters';
 
+const exit = (code: number) => {
+  if (!process.stdout.write('')) {
+    process.stdout.once('drain', () => process.exit(code));
+  } else {
+    process.exit(code);
+  }
+}
+
 yargs
   .env('JS_FUZZ')
   .command(
@@ -64,11 +72,11 @@ yargs
         reporter.write(stats);
 
         if (stats.type === StatType.FatalError) {
-          process.exit(1);
+          exit(1);
         }
 
         if (stats.type === StatType.ShutdownComplete) {
-          process.exit(0);
+          exit(0);
         }
       });
     },
@@ -100,8 +108,12 @@ yargs
         }),
     argv => {
       const contents = readFileSync(argv.file === '-' ? 0 : argv.file, 'utf-8');
-      const result = new Instrumenter().instrument(contents);
-      process.stdout.write(result);
+      const start = Date.now();
+      const { code, literals } = new Instrumenter().instrument(contents);
+      const duration = Date.now() - start;
+      process.stdout.write(code);
+      process.stderr.write(`Duration: ${duration}ms\r\n`);
+      process.stderr.write(`Literals: ${[...literals].map(l => JSON.stringify(l)).join(', ')}\r\n`);
     },
   )
   .strict()

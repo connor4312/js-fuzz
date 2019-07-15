@@ -43,7 +43,7 @@
     "clean": "node-ex rimraf coverage doc lib",
     "test": "node-ex npm-run-all --silent --parallel test:lint test:unit",
     "test:lint": "node-ex tslint --type-check --project tsconfig.json '{src,test}/**/*.ts'",
-    "test:unit": "mocha --opts mocha.opts"
+    "test:unit": "node-ex mocha --opts mocha.opts"
   },
   "bugs": {
     "url": "https://github.com/connor4312/js-fuzz/issues"

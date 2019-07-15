@@ -19,3 +19,7 @@ message WorkCoverage {
 message DoWork {
   bytes input = 1;
 }
+
+message FoundLiterals {
+  repeated string literals = 1;
+}

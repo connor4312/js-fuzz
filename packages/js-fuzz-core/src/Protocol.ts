@@ -97,6 +97,7 @@ export enum PacketKind {
   RequestCoverage,
   WorkCoverage,
   DoWork,
+  FoundLiterals
 }
 
 /**
@@ -150,7 +151,16 @@ export interface IDoWork {
   input: Buffer;
 }
 
-export type ipcCall = IWorkSummary | IDoWork | IReadyCall | IWorkCoverage | IRequestCoverage;
+/**
+ * IFoundLiterlas is sent to signal sent from a worker when new literals
+ * are encountered in the source code.
+ */
+export interface IFoundLiterals {
+  kind: PacketKind.FoundLiterals;
+  literals: string[];
+}
+
+export type ipcCall = IWorkSummary | IDoWork | IReadyCall | IWorkCoverage | IRequestCoverage | IFoundLiterals;
 
 /**
  * Protocol implements a super simple protobuf-based encoding on top of

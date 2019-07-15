@@ -9,7 +9,10 @@ import {
   SequenceExpression,
   Statement,
 } from 'estree';
-import { readFileSync } from 'fs';
+import { injectable, inject } from 'inversify';
+import { IFuzzOptions } from '../options';
+import * as Types from '../dependencies';
+import { HookManager } from './hook-manager';
 
 export interface IInstrumenterOptions {
   /**
@@ -53,10 +56,13 @@ function ensureBlock(stmt: Statement): BlockStatement {
  * the block to be prepended to is already a BlockExpression, we'll just
  * modify its body, otherwise we'll wrap it using the comma operator.
  */
-function prependBlock(block: Statement, toPrepend: ExpressionStatement[]): BlockStatement | ExpressionStatement {
+function prependBlock(
+  block: Statement,
+  toPrepend: ExpressionStatement[],
+): BlockStatement | ExpressionStatement {
   switch (block.type) {
     case 'BlockStatement':
-      block.body = (<Statement[]> toPrepend).concat(block.body);
+      block.body = (<Statement[]>toPrepend).concat(block.body);
       return block;
     case 'ExpressionStatement':
       block.expression = prependExpression(block.expression, toPrepend);
@@ -69,30 +75,13 @@ function prependBlock(block: Statement, toPrepend: ExpressionStatement[]): Block
 /**
  * Prepends the list of statements to the provided expression and returns it.
  */
-function prependExpression(block: Expression, toPrepend: ExpressionStatement[]): SequenceExpression {
+function prependExpression(
+  block: Expression,
+  toPrepend: ExpressionStatement[],
+): SequenceExpression {
   return {
     type: 'SequenceExpression',
-    expressions: toPrepend
-      .map(expr => expr.expression)
-      .concat(block),
-  };
-}
-
-/**
- * Adds a hook in `require()` which will transform files whose names pass
- * the precicate using the transformation function.
- */
-export function hookRequire(
-  predicate: (fname: string) => boolean,
-  transform: (input: string) => string,
-) {
-  require.extensions['.js'] = (m: any, fname: string) => {
-    const contents = readFileSync(fname, 'utf8');
-    if (predicate(fname)) {
-      m._compile(transform(contents), fname);
-    } else {
-      m._compile(contents, fname);
-    }
+    expressions: toPrepend.map(expr => expr.expression).concat(block),
   };
 }
 
@@ -101,25 +90,49 @@ export function hookRequire(
  * as described in AFL's whitepaper here:
  * http://lcamtuf.coredump.cx/afl/technical_details.txt
  */
-export class Instrumenter {
-
+@injectable()
+export class ConverageInstrumentor {
   private deterministCounter = 0;
   private options: IInstrumenterOptions;
+  private detachFn?: () => void;
 
-  constructor(options?: Partial<IInstrumenterOptions>) {
+  constructor(
+    @inject(Types.HookManager) private readonly hooks: HookManager,
+    @inject(Types.FuzzOptions) options: Pick<IFuzzOptions, 'instrumentor'>,
+  ) {
     this.options = {
       hashBits: 16,
       hashName: '__coverage__',
       deterministicKeys: false,
-      ...options
+      ...options.instrumentor,
     };
+  }
+
+  /**
+   * Hooks the instrumenter into the require() statement.
+   */
+  public attach() {
+    this.detach();
+    this.declareGlobal();
+    return this.hooks.hookRequire(code => this.instrument(code));
+  }
+
+  public detach() {
+    if (this.detachFn) {
+      this.detachFn();
+      this.detachFn = undefined;
+    }
   }
 
   /**
    * Instruments the provided code with branch analysis instructions.
    */
-  public instrument(code: string): string {
-    return generate(this.walk(parseScript(code)));
+  public instrument(code: string) {
+    return generate(
+      ESTrasverse.replace(parseScript(code), {
+        enter: stmt => this.instrumentBranches(stmt),
+      }),
+    );
   }
 
   /**
@@ -127,12 +140,12 @@ export class Instrumenter {
    * instrumented code is run.
    */
   public declareGlobal() {
-    (<any> global)[this.getPrevStateName()] = 0;
-    const existing: Buffer = (<any> global)[this.options.hashName];
+    (<any>global)[this.getPrevStateName()] = 0;
+    const existing: Buffer = (<any>global)[this.options.hashName];
     if (existing) {
       existing.fill(0);
     } else {
-      (<any> global)[this.options.hashName] = Buffer.alloc(1 << this.options.hashBits);
+      (<any>global)[this.options.hashName] = Buffer.alloc(1 << this.options.hashBits);
     }
   }
 
@@ -140,53 +153,33 @@ export class Instrumenter {
    * Returns the last coverage hashmap.
    */
   public getLastCoverage(): Buffer {
-    return (<any> global)[this.options.hashName];
+    return (<any>global)[this.options.hashName];
   }
 
   /**
    * Walks and instruments the AST tree.
    */
-  private walk(stmt: Node): Node {
+  private instrumentBranches(stmt: Node) {
     switch (stmt.type) {
       case 'IfStatement':
-        stmt.consequent = prependBlock(
-          ensureBlock(stmt.consequent),
-          this.createTransitionBlock(),
-        );
-        stmt.alternate = stmt.alternate && prependBlock(
-          ensureBlock(stmt.alternate),
-          this.createTransitionBlock(),
-        );
-        break;
+        stmt.consequent = prependBlock(ensureBlock(stmt.consequent), this.createTransitionBlock());
+        stmt.alternate =
+          stmt.alternate && prependBlock(ensureBlock(stmt.alternate), this.createTransitionBlock());
+        return stmt;
       case 'ConditionalExpression':
         stmt.consequent = prependExpression(stmt.consequent, this.createTransitionBlock());
         stmt.alternate = prependExpression(stmt.alternate, this.createTransitionBlock());
-        break;
+        return stmt;
       case 'LogicalExpression':
         stmt.left = prependExpression(stmt.left, this.createTransitionBlock());
         stmt.right = prependExpression(stmt.right, this.createTransitionBlock());
-        break;
+        return stmt;
       case 'SwitchCase':
-        stmt.consequent = (<Statement[]> this.createTransitionBlock())
-          .concat(stmt.consequent);
-        break;
+        stmt.consequent = (<Statement[]>this.createTransitionBlock()).concat(stmt.consequent);
+        return stmt;
       default:
-        // ignored
+        return stmt;
     }
-
-    const toVisit: string[] = (<any> ESTrasverse).VisitorKeys[stmt.type] || [];
-    toVisit.forEach(key => {
-      const value: Node | Node[] = (<any> stmt)[key];
-      if (!value) {
-        return;
-      }
-
-      (<any> stmt)[key] = value instanceof Array
-        ? value.map(s => this.walk(s))
-        : this.walk(value);
-    });
-
-    return stmt;
   }
 
   /**
@@ -198,7 +191,7 @@ export class Instrumenter {
    */
   private createRandomID(): number {
     if (this.options.deterministicKeys) {
-      return this.deterministCounter += 1;
+      return (this.deterministCounter += 1);
     }
 
     return Math.floor(Math.random() * (1 << this.options.hashBits)); // tslint:disable

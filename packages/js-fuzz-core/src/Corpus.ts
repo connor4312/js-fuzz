@@ -1,6 +1,5 @@
-import { randn } from './Math';
-import { mutators } from './Mutations';
 import { IWorkSummary, PacketKind, WorkResult } from './Protocol';
+import { Mutator } from './mutations/mutator';
 
 /**
  * The Input is a record for a particular job. It can contain a Coverage hash.
@@ -16,28 +15,6 @@ export class Input {
     public readonly depth: number,
     public readonly summary: IWorkSummary,
   ) {}
-
-  /**
-   * Returns a new buffer created by mutating this input.
-   */
-  public mutate(): Buffer {
-    let mutations = 1;
-    while (Math.random() < 0.5) {
-      mutations += 1;
-    }
-
-    let output = this.input;
-    for (let i = 0; i < mutations; i += 1) {
-      const next = mutators[randn(mutators.length)](output);
-      if (next !== null) {
-        output = next;
-      } else {
-        i -= 1;
-      }
-    }
-
-    return output;
-  }
 
   /**
    * Serializes an input into a string.
@@ -159,10 +136,24 @@ export class Corpus {
     },
   } = Object.create(null);
 
+  private mutator = new Mutator();
   private runningScore: { runningScore: number, input: Input }[] = [];
   private totalExecutionTime = 0;
   private totalBranchCoverage = 0;
+  private literals = new Set<string>();
   public totalScore = 0;
+
+  public foundLiterals(literals: ReadonlyArray<string>) {
+    literals = literals.filter(l => !this.literals.has(l));
+    if (!literals.length) {
+      return;
+    }
+console.log('adding literals', literals);
+    this.mutator.addLiterals(literals);
+    for (const literal of literals) {
+      this.literals.add(literal);
+    }
+  }
 
   /**
    * Returns if we're interested in getting a full summary report for the

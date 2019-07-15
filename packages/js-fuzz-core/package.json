@@ -20,6 +20,8 @@
     "esprima": "^4.0.1",
     "estraverse": "^4.2.0",
     "filesize": "^4.1.2",
+    "inversify": "^5.0.1",
+    "minimatch": "^3.0.4",
     "parse-duration": "^0.1.1",
     "protobufjs": "^6.8.8",
     "rxjs": "^6.5.2",
@@ -28,7 +30,8 @@
   "devDependencies": {
     "@types/escodegen": "^0.0.6",
     "@types/esprima": "^4.0.2",
-    "@types/estraverse": "^0.0.6"
+    "@types/estraverse": "^0.0.6",
+    "@types/minimatch": "^3.0.3"
   },
   "repository": {
     "type": "git",
@@ -40,7 +43,7 @@
     "clean": "node-ex rimraf coverage doc lib",
     "test": "node-ex npm-run-all --silent --parallel test:lint test:unit",
     "test:lint": "node-ex tslint --type-check --project tsconfig.json '{src,test}/**/*.ts'",
-    "test:unit": "mocha --opts mocha.opts"
+    "test:unit": "node-ex mocha --opts mocha.opts"
   },
   "bugs": {
     "url": "https://github.com/connor4312/js-fuzz/issues"

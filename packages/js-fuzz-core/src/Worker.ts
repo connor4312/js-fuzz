@@ -1,13 +1,9 @@
 import { createHash } from 'crypto';
-import { hookRequire, Instrumenter } from './Instrumenter';
 import { roundUint8ToNextPowerOfTwo } from './Math';
-import {
-  IModule,
-  ipcCall,
-  PacketKind,
-  Protocol,
-  WorkResult,
-} from './Protocol';
+import { IModule, ipcCall, PacketKind, Protocol, WorkResult } from './Protocol';
+import { injectable, inject } from 'inversify';
+import * as Types from './dependencies';
+import { ConverageInstrumentor } from './instrumentation/coverage-instrumentor';
 
 /**
  * Evens off the statement count in the coverage into count "buckets" and
@@ -34,55 +30,40 @@ function getMicroTime(): number {
  * The worker is attached to a Cluster and runs the target script when the
  * manager asks for it, reporting back code coverage metrics.
  */
+@injectable()
 export class Worker {
-
   /**
    * The module to be put under fuzzing
    */
   private target!: IModule;
-  /**
-   * List of modules to exclude from code coverage analysis.
-   */
-  private excludes: RegExp[] = [];
-
-  /**
-   * Instrumenter used for the worker code's code.
-   */
-  private instrumenter!: Instrumenter;
-
   private lastCoverage!: Buffer;
   private proto!: Protocol;
 
-  constructor(private targetPath: string, exclude: string[]) {
-    this.excludes = exclude.map(e => new RegExp(e));
+  constructor(
+    private targetPath: string,
+    @inject(Types.CoverageInstrumentor) private readonly instrumenter: ConverageInstrumentor) {
   }
 
   public start() {
-    const instrumenter = this.instrumenter = new Instrumenter();
-    instrumenter.declareGlobal();
-    hookRequire(
-      file => !this.excludes.some(re => re.test(file)),
-      contents => instrumenter.instrument(contents),
-    );
+    const proto = (this.proto = new Protocol(require('./fuzz')));
+    proto.attach(process.stdin, process.stdout);
+    this.instrumenter.attach();
 
     this.target = require(this.targetPath); // tslint:disable-line
 
-    const proto = this.proto = new Protocol(require('./fuzz'));
-    this.proto = proto;
-
     proto.on('message', (msg: ipcCall) => {
       switch (msg.kind) {
-      case PacketKind.DoWork:
-        this.doWork(msg.input);
-        break;
-      case PacketKind.RequestCoverage:
-        proto.write({
-          kind: PacketKind.WorkCoverage,
-          coverage: this.lastCoverage,
-        });
-        break;
-      default:
-        throw new Error(`Unknown IPC call: ${msg.kind}`);
+        case PacketKind.DoWork:
+          this.doWork(msg.input);
+          break;
+        case PacketKind.RequestCoverage:
+          proto.write({
+            kind: PacketKind.WorkCoverage,
+            coverage: this.lastCoverage,
+          });
+          break;
+        default:
+          throw new Error(`Unknown IPC call: ${msg.kind}`);
       }
     });
 
@@ -91,14 +72,10 @@ export class Worker {
       process.exit(1);
     });
 
-    proto.attach(process.stdin, process.stdout);
     proto.write({ kind: PacketKind.Ready });
   }
 
-  private runFuzz(
-    input: Buffer,
-    callback: (err: any, res: WorkResult) => void,
-  ): void {
+  private runFuzz(input: Buffer, callback: (err: any, res: WorkResult) => void): void {
     let called = false;
     const handler = (err: any, res: WorkResult) => {
       if (called) {
@@ -118,10 +95,7 @@ export class Worker {
       handler(e, null as any);
     }
   }
-  private runFuzzInner(
-    input: Buffer,
-    callback: (err: any, res: WorkResult) => void,
-  ): void {
+  private runFuzzInner(input: Buffer, callback: (err: any, res: WorkResult) => void): void {
     if (this.target.fuzz.length > 1) {
       this.target.fuzz(input, callback);
       return;
@@ -129,12 +103,11 @@ export class Worker {
 
     const out = this.target.fuzz(input);
     if (out && typeof out.then === 'function') {
-      out.then(res => callback(null, res))
-        .catch(err => callback(err, null as any));
+      out.then(res => callback(null, res)).catch(err => callback(err, null as any));
       return;
     }
 
-    callback(null, <any> out);
+    callback(null, <any>out);
   }
 
   private doWork(input: Buffer): void {
@@ -150,7 +123,9 @@ export class Worker {
       this.proto.write({
         coverageSize: size,
         error: error ? error.stack || error.message || error : undefined,
-        hash: createHash('md5').update(coverage).digest('hex'),
+        hash: createHash('md5')
+          .update(coverage)
+          .digest('hex'),
         inputLength: input.length,
         kind: PacketKind.WorkSummary,
         result,

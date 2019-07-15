@@ -6,6 +6,7 @@ import { Corpus, Input } from './Corpus';
 import { ipcCall, IWorkSummary, PacketKind, Protocol } from './Protocol';
 import { ISerializer } from './Serializer';
 import { Stat, StatType } from './Stats';
+import { IFuzzOptions } from './options';
 
 const split = require('split');
 
@@ -22,9 +23,10 @@ class Manager extends EventEmitter {
   private timeoutHandle!: NodeJS.Timer;
 
   constructor(
-    private proc: cp.ChildProcess,
-    private proto: Protocol,
-    private options: IManagerOptions,
+    private readonly proc: cp.ChildProcess,
+    private readonly proto: Protocol,
+    private readonly options: IManagerOptions,
+    private readonly corpus: Corpus,
   ) {
     super();
 
@@ -43,6 +45,9 @@ class Manager extends EventEmitter {
           break;
         case PacketKind.WorkCoverage:
           this.emit('workCoverage', msg.coverage);
+          break;
+        case PacketKind.FoundLiterals:
+          this.corpus.foundLiterals(msg.literals);
           break;
         default:
           throw new Error(`Unknown IPC call: ${msg.kind}`);
@@ -124,50 +129,19 @@ class Manager extends EventEmitter {
    * Creates a new Worker instance and returns a promise that resolves
    * when it has signaled it's ready.
    */
-  public static Spawn(target: string, options: IManagerOptions): Promise<Manager> {
+  public static Spawn(target: string, corpus: Corpus, options: IManagerOptions): Promise<Manager> {
     return new Promise<Manager>((resolve, reject) => {
       const worker = new Manager(
         cp.spawn('node', [`${__dirname}/Worker.js`, target, JSON.stringify(options.exclude)]),
         new Protocol(require('./fuzz')),
         options,
+        corpus,
       );
       worker.once('ready', () => resolve(worker));
       worker.once('error', (err: Error) => reject(err));
     });
   }
 }
-
-/**
- * Options passed in to instantiate the cluster.
- */
-export interface IClusterOptions {
-  /**
-   * The number of worker processes to create.
-   */
-  workers: number;
-
-  /**
-   * Absolute path to the target script to generate coverage on.
-   */
-  target: string;
-
-  /**
-   * Patterns for files or modules which should be excluded from coverage.
-   */
-  exclude: string[];
-
-  /**
-   * If set to true, stats will not be drawn and the process will not print anything.
-   */
-  quiet: boolean;
-
-  /**
-   * Length of time we kill worker processes after, given in milliseconds, if
-   * they don't produce results.
-   */
-  timeout: number;
-}
-
 /**
  * The Cluster coordinates multiple child
  */
@@ -181,7 +155,7 @@ export class Cluster {
     return this.statsSubject;
   }
 
-  constructor(private readonly options: IClusterOptions, private readonly serializer: ISerializer) {
+  constructor(private readonly options: IFuzzOptions, private readonly serializer: ISerializer) {
     this.start();
   }
 
@@ -211,16 +185,17 @@ export class Cluster {
    * Boots the cluster.
    */
   public start() {
-    this.emitStat({ type: StatType.SpinUp, workerCount: this.options.workers });
-    const todo: Promise<Manager>[] = [];
-    for (let i = 0; i < this.options.workers; i += 1) {
-      todo.push(this.spawn());
-    }
-
     this.serializer
       .loadCorpus()
       .then(corpus => {
         this.corpus = corpus;
+        this.emitStat({ type: StatType.SpinUp, workerCount: this.options.workers });
+
+        const todo: Promise<Manager>[] = [];
+        for (let i = 0; i < this.options.workers; i += 1) {
+          todo.push(this.spawn());
+        }
+
         return Promise.all(todo);
       })
       .then(workers => {
@@ -228,7 +203,7 @@ export class Cluster {
         workers.forEach((worker, i) => this.monitorWorker(worker, i));
         this.emitStat({ type: StatType.WorkersReady });
       })
-      .catch(() => {});
+      .catch(err => this.emitFatalError(err));
   }
 
   /**
@@ -249,7 +224,7 @@ export class Cluster {
   }
 
   private spawn(): Promise<Manager> {
-    return Manager.Spawn(this.options.target, {
+    return Manager.Spawn(this.options.target, this.corpus, {
       exclude: this.options.exclude,
       timeout: this.options.timeout,
     });
@@ -263,7 +238,7 @@ export class Cluster {
     let lastWork: Buffer;
     const sendNextPacket = () => {
       lastInput = this.corpus.pickWeighted();
-      lastWork = lastInput.mutate();
+      lastWork = this.corpus.mutate(lastInput);
       worker.send(lastWork);
     };
 
