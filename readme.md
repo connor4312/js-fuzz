@@ -83,4 +83,5 @@ Most limitations revolve around what Node will let us get at without leaning on 
 
 #### Acknowledgments
 
-The [AFL](http://lcamtuf.coredump.cx/afl/) project is the original fuzzer and is where most of the beautiful mechanics originated from. [go-fuzz](https://github.com/dvyukov/go-fuzz) was my original introduction to fuzzing, and [Istanbul](https://github.com/gotwarlost/istanbul) was a fantastic reference for building some of the coverage tooling.
+ - The [AFL](http://lcamtuf.coredump.cx/afl/) project is the original fuzzer and is where most of the beautiful mechanics originated from.
+ - Many mechanics in this implementation are derived from [go-fuzz](https://github.com/dvyukov/go-fuzz), which was also my original introduction to fuzzing. Dmitry talks through some of the internals [here](https://www.youtube.com/watch?v=Ef7TtSZlmlk).

@@ -4,7 +4,7 @@ import { HookManager } from './hook-manager';
 import { LiteralExtractor } from './literal-extractor';
 
 const loadInstrumentationFixtures = () => {
-  const base = `${__dirname}/../test/fixture/instrument`;
+  const base = `${__dirname}/../../test/fixture/instrument`;
   const files = readdirSync(base);
   const output: { name: string; contents: string; literals: string[] }[] = [];
 

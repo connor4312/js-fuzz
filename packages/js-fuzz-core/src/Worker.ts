@@ -1,6 +1,6 @@
 import { createHash } from 'crypto';
 import { roundUint8ToNextPowerOfTwo } from './Math';
-import { IModule, ipcCall, PacketKind, Protocol, WorkResult } from './Protocol';
+import { IModule, IPCCall, PacketKind, Protocol, WorkResult } from './Protocol';
 import { injectable, inject } from 'inversify';
 import * as Types from './dependencies';
 import { ConverageInstrumentor } from './instrumentation/coverage-instrumentor';
@@ -51,7 +51,7 @@ export class Worker {
 
     this.target = require(this.targetPath); // tslint:disable-line
 
-    proto.on('message', (msg: ipcCall) => {
+    proto.on('message', (msg: IPCCall) => {
       switch (msg.kind) {
         case PacketKind.DoWork:
           this.doWork(msg.input);
@@ -111,7 +111,7 @@ export class Worker {
   }
 
   private doWork(input: Buffer): void {
-    this.instrumenter.declareGlobal();
+    this.instrumenter.attach();
 
     const start = getMicroTime();
 

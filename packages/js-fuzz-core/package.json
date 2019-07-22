@@ -39,7 +39,7 @@
   },
   "scripts": {
     "prepare": "npm run build",
-    "build": "npm run clean && node-ex tsc && pbjs src/fuzz.proto -t static-module > dist/fuzz.js",
+    "build": "npm run clean && node-ex tsc && pbjs src/protocol/fuzz.proto -t static-module > dist/protocol/fuzz.js",
     "clean": "node-ex rimraf coverage doc lib",
     "test": "node-ex npm-run-all --silent --parallel test:lint test:unit",
     "test:lint": "node-ex tslint --type-check --project tsconfig.json '{src,test}/**/*.ts'",

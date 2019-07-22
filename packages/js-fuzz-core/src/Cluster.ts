@@ -3,7 +3,7 @@ import { EventEmitter } from 'events';
 import { Subject, Observable } from 'rxjs';
 
 import { Corpus, Input } from './Corpus';
-import { ipcCall, IWorkSummary, PacketKind, Protocol } from './Protocol';
+import { IPCCall, IWorkSummary, PacketKind, Protocol } from './Protocol';
 import { ISerializer } from './Serializer';
 import { Stat, StatType } from './Stats';
 import { IFuzzOptions } from './options';
@@ -34,7 +34,7 @@ class Manager extends EventEmitter {
 
     proto.attach(proc.stdout, proc.stdin);
 
-    proto.on('message', (msg: ipcCall) => {
+    proto.on('message', (msg: IPCCall) => {
       switch (msg.kind) {
         case PacketKind.Ready:
           this.emit('ready');

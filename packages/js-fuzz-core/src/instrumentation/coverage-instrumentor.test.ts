@@ -4,7 +4,7 @@ import { readFileSync, readdirSync } from 'fs';
 import { HookManager } from './hook-manager';
 
 const loadInstrumentationFixtures = () => {
-  const base = `${__dirname}/../test/fixture/instrument`;
+  const base = `${__dirname}/../../test/fixture/instrument`;
   const files = readdirSync(base);
   const output: { name: string; before: string; after: string }[] = [];
 

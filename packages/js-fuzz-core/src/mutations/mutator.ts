@@ -1,13 +1,19 @@
 import { IMutationAlgorithm, IMutationContext, mutators } from './algorithms';
 import { pickOne } from '../Math';
+import { injectable, inject } from 'inversify';
+import { MutationAlgorithms } from '../dependencies';
 
 /**
  * Mutation manager.
  */
+@injectable()
 export class Mutator {
   private context: IMutationContext = { literals: [] };
 
-  constructor(private readonly algorithms: ReadonlyArray<IMutationAlgorithm> = mutators) {}
+  constructor(
+    @inject(MutationAlgorithms)
+    private readonly algorithms: ReadonlyArray<IMutationAlgorithm> = mutators,
+  ) {}
 
   /**
    * Adds a new literal that can be used for mutations.

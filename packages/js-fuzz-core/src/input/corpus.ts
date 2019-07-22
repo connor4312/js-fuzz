@@ -1,6 +1,4 @@
-import { IWorkSummary, PacketKind, WorkResult } from './Protocol';
-import { Mutator } from './mutations/mutator';
-
+import { Input } from "./input";
 
 /**
  * The hash store saves a bunch of Buffers and provides methods to efficiently
@@ -19,7 +17,6 @@ export class Corpus {
   private totalExecutionTime = 0;
   private totalBranchCoverage = 0;
   private literals = new Set<string>();
-  public totalScore = 0;
 
   public foundLiterals(literals: ReadonlyArray<string>) {
     literals = literals.filter(l => !this.literals.has(l));
@@ -38,12 +35,7 @@ export class Corpus {
    * the given hash.
    */
   public isInterestedIn(input: Input) {
-    const existing = this.store[input.summary.hash];
-    if (!existing) {
-      return true;
-    }
-
-    return this.scoreInput(input) > this.scoreInput(existing.input);
+    return !this.store[input.summary.hash];
   }
 
   /**
@@ -76,30 +68,18 @@ export class Corpus {
    * Stores the work summary and the coverage file.
    */
   public put(input: Input) {
-    let index: number;
-    const running = this.runningScore;
     const existing = this.store[input.summary.hash];
+    if (existing) {
+      return;
+    }
+
+
+    const running = this.runningScore;
+    const index = running.length;
     const score = this.scoreInput(input);
 
-    // If we have an existing record, adjust all the counters to remove
-    // the old record and add the new one. Otherwise, just add up the
-    // new score, coverage, and runtime.
-    if (existing) {
-      this.totalBranchCoverage += input.summary.coverageSize - existing.input.summary.coverageSize;
-      this.totalExecutionTime += input.summary.runtime - existing.input.summary.runtime;
-
-      const delta = score - this.scoreInput(existing.input);
-      index = existing.indexInRunning;
-      for (let i = index + 1; i < running.length; i += 1) {
-        running[i].runningScore += delta;
-      }
-      this.totalScore += delta;
-    } else {
-      index = running.length;
-      this.totalBranchCoverage += input.summary.coverageSize;
-      this.totalExecutionTime += input.summary.runtime;
-      this.totalScore += score;
-    }
+    this.totalBranchCoverage += input.summary.coverageSize;
+    this.totalExecutionTime += input.summary.runtime;
 
     running[index] = {
       runningScore: index === 0 ? score : running[index - 1].runningScore + score,
@@ -117,6 +97,10 @@ export class Corpus {
    */
   public size() {
     return this.runningScore.length;
+  }
+
+  public coverage() {
+    return this.runningScore.reduce((acc, r) => acc + r.input.summary.coverageSize, 0);
   }
 
   private scoreInput(input: Input): number {

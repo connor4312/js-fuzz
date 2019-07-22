@@ -16,7 +16,7 @@ export class LiteralExtractor {
    * Detects and returns all literals in files required synchronously within
    * the given function.
    */
-  public detectAll(fn: () => void): Set<string> {
+  public async detectAll(fn: () => Promise<void>): Promise<Set<string>> {
     const literals = new Set<string>();
     const unhook = this.hooks.hookRequire(src => {
       this.addToSet(src, literals);
@@ -24,7 +24,7 @@ export class LiteralExtractor {
     });
 
     try {
-      fn();
+      await fn();
     } finally {
       unhook();
     }
