@@ -1,28 +1,22 @@
 if (foo()) {
-    __coverage__[__coverage___prevState ^ 1]++;
-    __coverage___prevState = 1;
+    __js_fuzz_.coverage.hash[2422852216]++;
     bar();
 }
 if (foo()) {
-    __coverage__[__coverage___prevState ^ 2]++;
-    __coverage___prevState = 2;
+    __js_fuzz_.coverage.hash[1201538291]++;
     bar();
 }
 if (foo()) {
-    __coverage__[__coverage___prevState ^ 3]++;
-    __coverage___prevState = 3;
+    __js_fuzz_.coverage.hash[4283873684]++;
     bar();
 } else {
-    __coverage__[__coverage___prevState ^ 4]++;
-    __coverage___prevState = 4;
+    __js_fuzz_.coverage.hash[2752366794]++;
     baz();
 }
-if ((__coverage__[__coverage___prevState ^ 7]++, __coverage___prevState = 7, foo()) || (__coverage__[__coverage___prevState ^ 8]++, __coverage___prevState = 8, bin())) {
-    __coverage__[__coverage___prevState ^ 5]++;
-    __coverage___prevState = 5;
+if ((__js_fuzz_.coverage.hash[3178677100]++, foo()) || (__js_fuzz_.coverage.hash[1101346672]++, bin())) {
+    __js_fuzz_.coverage.hash[4039726864]++;
     bar();
 } else {
-    __coverage__[__coverage___prevState ^ 6]++;
-    __coverage___prevState = 6;
+    __js_fuzz_.coverage.hash[14765166]++;
     baz();
 }

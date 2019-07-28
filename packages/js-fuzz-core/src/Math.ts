@@ -36,10 +36,17 @@ export function setRandomNumberGenerator(generator: () => number) {
 }
 
 /**
- * Returns a random integer in the range [0, max)
+ * Returns a random integer in the range [0, max), or [min, max) if two
+ * arguments are provided.
  */
-export function randn(max: number): number {
-  return Math.floor(rng() * max);
+export function randn(max: number): number;
+export function randn(min: number, max: number): number;
+export function randn(a: number, b?: number): number {
+  if (b === undefined) {
+    return Math.floor(rng() * a);
+  }
+
+  return Math.floor(rng() * (b - a)) + a;
 }
 
 /**

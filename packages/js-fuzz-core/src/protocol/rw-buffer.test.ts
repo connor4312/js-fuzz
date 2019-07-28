@@ -1,11 +1,12 @@
 import { expect } from 'chai';
+import { RWBuffer } from './rw-buffer';
 
 describe('RWBuffer', () => {
   it('sets up correctly', () => {
     const buffer = new RWBuffer(4);
     expect(buffer.underlyingSize()).to.equal(4);
     expect(buffer.length()).to.equal(0);
-    expect(buffer.getUnread()).to.equal(Buffer.from([]));
+    expect(buffer.getUnread()).to.deep.equal(Buffer.from([]));
   });
 
   it('writes small data', () => {
@@ -13,7 +14,7 @@ describe('RWBuffer', () => {
     buffer.write(Buffer.from('hi'));
     expect(buffer.underlyingSize()).to.equal(4);
     expect(buffer.length()).to.equal(2);
-    expect(buffer.getUnread()).to.equal(Buffer.from('hi'));
+    expect(buffer.getUnread()).to.deep.equal(Buffer.from('hi'));
   });
 
   it('advances pointer', () => {
@@ -23,7 +24,7 @@ describe('RWBuffer', () => {
 
     expect(buffer.underlyingSize()).to.equal(4);
     expect(buffer.length()).to.equal(0);
-    expect(buffer.getUnread()).to.equal(Buffer.from([]));
+    expect(buffer.getUnread()).to.deep.equal(Buffer.from([]));
   });
 
   it('shifts data without reallocating', () => {
@@ -34,7 +35,7 @@ describe('RWBuffer', () => {
 
     expect(buffer.underlyingSize()).to.equal(4);
     expect(buffer.length()).to.equal(4);
-    expect(buffer.getUnread()).to.equal(Buffer.from('hiya'));
+    expect(buffer.getUnread()).to.deep.equal(Buffer.from('hiya'));
   });
 
   it('grows on large data', () => {
@@ -43,6 +44,6 @@ describe('RWBuffer', () => {
 
     expect(buffer.underlyingSize()).to.equal(16);
     expect(buffer.length()).to.equal(11);
-    expect(buffer.getUnread()).to.equal(Buffer.from('hello world'));
+    expect(buffer.getUnread()).to.deep.equal(Buffer.from('hello world'));
   });
 });

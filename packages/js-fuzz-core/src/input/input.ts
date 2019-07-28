@@ -1,9 +1,22 @@
-import { WorkResult, IWorkSummary } from "../Protocol";
+import { PacketKind, WorkResult, IWorkSummary } from "../protocol/types";
 
 /**
  * The Input is a record for a particular job. It can contain a Coverage hash.
  */
 export class Input {
+  public static zero = new Input(
+    Buffer.from([]),
+    0,
+    {
+      kind: PacketKind.WorkSummary,
+      result: WorkResult.Allow,
+      coverageSize: 0,
+      inputLength: 0,
+      hash: '',
+      runtime: Infinity,
+    },
+  );
+
   private static initialScore = 10;
   private static minScore = 1;
   private static maxScore = 100;
@@ -108,16 +121,3 @@ export class Input {
     );
   }
 }
-
-const zeroInput = new Input(
-  Buffer.from([]),
-  0,
-  {
-    kind: PacketKind.WorkSummary,
-    result: WorkResult.Allow,
-    coverageSize: 0,
-    inputLength: 0,
-    hash: '',
-    runtime: Infinity,
-  },
-);

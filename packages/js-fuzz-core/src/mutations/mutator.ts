@@ -1,4 +1,4 @@
-import { IMutationAlgorithm, IMutationContext, mutators } from './algorithms';
+import { IMutationAlgorithm, IMutationContext } from './algorithms';
 import { pickOne } from '../Math';
 import { injectable, inject } from 'inversify';
 import { MutationAlgorithms } from '../dependencies';
@@ -12,7 +12,7 @@ export class Mutator {
 
   constructor(
     @inject(MutationAlgorithms)
-    private readonly algorithms: ReadonlyArray<IMutationAlgorithm> = mutators,
+    private readonly algorithms: ReadonlyArray<IMutationAlgorithm>,
   ) {}
 
   /**
@@ -35,7 +35,7 @@ export class Mutator {
     }
 
     for (let i = 0; i < mutations; i += 1) {
-      const next = pickOne(this.algorithms)(input, this.context);
+      const next = pickOne(this.algorithms).mutate(input, this.context);
       if (next !== null) {
         input = next;
       } else {

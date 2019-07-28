@@ -78,7 +78,7 @@ export class ConverageInstrumentor {
    */
   public attach() {
     this.runtime.install();
-    return this.hooks.hookRequire(code => this.instrument(code));
+    this.detachFn = this.hooks.hookRequire(code => this.instrument(code));
   }
 
   /**

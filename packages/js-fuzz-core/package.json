@@ -20,10 +20,13 @@
     "esprima": "^4.0.1",
     "estraverse": "^4.2.0",
     "filesize": "^4.1.2",
+    "fs-extra": "^8.1.0",
     "inversify": "^5.0.1",
     "minimatch": "^3.0.4",
     "parse-duration": "^0.1.1",
     "protobufjs": "^6.8.8",
+    "randexp": "^0.5.3",
+    "reflect-metadata": "^0.1.13",
     "rxjs": "^6.5.2",
     "split": "^1.0.1"
   },
@@ -31,6 +34,7 @@
     "@types/escodegen": "^0.0.6",
     "@types/esprima": "^4.0.2",
     "@types/estraverse": "^0.0.6",
+    "@types/fs-extra": "^8.0.0",
     "@types/minimatch": "^3.0.3"
   },
   "repository": {

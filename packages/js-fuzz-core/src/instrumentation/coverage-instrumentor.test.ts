@@ -1,7 +1,7 @@
 import { expect } from 'chai';
 import { ConverageInstrumentor } from './coverage-instrumentor';
 import { readFileSync, readdirSync } from 'fs';
-import { HookManager } from './hook-manager';
+import * as Types from '../dependencies';
 
 const loadInstrumentationFixtures = () => {
   const base = `${__dirname}/../../test/fixture/instrument`;
@@ -28,16 +28,21 @@ const loadInstrumentationFixtures = () => {
 describe('coverage-instrumenter', () => {
   let inst: ConverageInstrumentor;
 
-  beforeEach(() => {
-    inst = new ConverageInstrumentor(new HookManager({ exclude: [] }), {
-      instrumentor: { deterministicKeys: true },
-    });
+  before(() => {
+    const container = Types.getContainerInstance();
+    container.bind(Types.FuzzOptions).toConstantValue({ exclude: [] });
+    inst = container.get(Types.CoverageInstrumentor);
+  });
+
+  after(() => {
+    inst.detach();
   });
 
   describe('fixtures', () => {
     loadInstrumentationFixtures().forEach(tcase => {
       it(`instruments ${tcase.name}`, () => {
-        expect(inst.instrument(tcase.before)).to.equal(tcase.after);
+        const instrumented = inst.instrument(tcase.before);
+        expect(instrumented).to.equal(tcase.after);
       });
     });
   });

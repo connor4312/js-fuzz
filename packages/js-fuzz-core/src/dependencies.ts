@@ -1,4 +1,4 @@
-import { Container } from "inversify";
+import { Container } from 'inversify';
 
 export const FuzzOptions = Symbol('FuzzOptions');
 export const ClusterFactory = Symbol('ClusterFactory');
@@ -13,6 +13,15 @@ export const Mutator = Symbol('Mutator');
 export const CoverageHashService = Symbol('CoverageHashService');
 export const RuntimeServiceCollection = Symbol('RuntimeServiceCollection');
 export const Runtime = Symbol('Runtime');
+
+let singleton: Container;
+export const getContainerInstance = () => {
+  if (!singleton) {
+    singleton = createContainer();
+  }
+
+  return singleton.createChild();
+};
 
 export const createContainer = () => {
   const container = new Container();
@@ -30,58 +39,52 @@ export const createContainer = () => {
   container
     .bind(CoverageInstrumentor)
     .toDynamicValue(ctx =>
-      ctx.container.resolve(require('./instrumentation/coverage-instrumentor').ConverageInstrumentor)
+      ctx.container.resolve(
+        require('./instrumentation/coverage-instrumentor').ConverageInstrumentor,
+      ),
     )
     .inSingletonScope();
 
   container
     .bind(LiteralExtractor)
     .toDynamicValue(ctx =>
-      ctx.container.resolve(require('./instrumentation/literal-extractor').LiteralExtractor)
+      ctx.container.resolve(require('./instrumentation/literal-extractor').LiteralExtractor),
     )
     .inSingletonScope();
 
   container
     .bind(MutationAlgorithms)
-    .toDynamicValue(ctx =>
-      ctx.container.resolve(require('./mutations/algorithms').mutators)
-    )
+    .toDynamicValue(ctx => ctx.container.resolve(require('./mutations/algorithms').mutators))
     .inSingletonScope();
 
   container
     .bind(Mutator)
-    .toDynamicValue(ctx =>
-      ctx.container.resolve(require('./mutations/mutator').Mutator)
-    )
+    .toDynamicValue(ctx => ctx.container.resolve(require('./mutations/mutator').Mutator))
     .inSingletonScope();
 
   container
     .bind(ClusterFactory)
-    .toDynamicValue(ctx =>
-      ctx.container.resolve(require('./cluster-factory').ClusterFactory)
-    )
+    .toDynamicValue(ctx => ctx.container.resolve(require('./cluster-factory').ClusterFactory))
     .inSingletonScope();
 
   container
     .bind(CoverageHashService)
-    .toDynamicValue(ctx =>
-      ctx.container.resolve(require('./runtime/coverage-hash').CoverageHash)
-    )
+    .toDynamicValue(ctx => ctx.container.resolve(require('./runtime/coverage-hash').CoverageHash))
     .inSingletonScope();
 
   container
     .bind(RuntimeServiceCollection)
     .toDynamicValue(ctx =>
-      ctx.container.resolve(require('./runtime/runtime-service-collection').RuntimeServiceCollection)
+      ctx.container.resolve(
+        require('./runtime/runtime-service-collection').RuntimeServiceCollection,
+      ),
     )
     .inSingletonScope();
 
   container
     .bind(Runtime)
-    .toDynamicValue(ctx =>
-      ctx.container.resolve(require('./runtime/runtime').Runtime)
-    )
+    .toDynamicValue(ctx => ctx.container.resolve(require('./runtime/runtime').Runtime))
     .inSingletonScope();
 
-    return container;
+  return container;
 };

@@ -2,7 +2,7 @@
 /**
  * RWBuffer is a simple implementation of a byte buffer with read and write pointers.
  */
-class RWBuffer {
+export class RWBuffer {
   private underlying: Buffer;
   private writePtr = 0;
   private readPtr = 0;
@@ -69,7 +69,7 @@ class RWBuffer {
    */
   private grow(size: number) {
     // Grow if the message is too large to fit in our buffer at all.
-    for (let ulen = this.underlying.length; size >= ulen; ulen *= 2) {
+    for (let ulen = this.underlying.length; size > ulen; ulen *= 2) {
       const next = Buffer.allocUnsafe(ulen * 2);
       this.underlying.copy(next, 0, this.readPtr, this.writePtr);
       this.writePtr -= this.readPtr;

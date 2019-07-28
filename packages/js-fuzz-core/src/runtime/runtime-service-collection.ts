@@ -1,9 +1,9 @@
-import { CoverageHash } from "./coverage-hash";
+import { CoverageHash, ICoverageHash } from "./coverage-hash";
 import { injectable, inject } from "inversify";
 import * as Types from "../dependencies";
 
 export interface IRuntimeServices {
-  coverage: CoverageHash;
+  coverage: ICoverageHash;
 }
 
 /**

@@ -1,9 +1,11 @@
 import { Input } from "./input";
+import { injectable } from "inversify";
 
 /**
  * The hash store saves a bunch of Buffers and provides methods to efficiently
  * check to see if a given buffer is in the store yet.
  */
+@injectable()
 export class Corpus {
   private store: {
     [hash: string]: {

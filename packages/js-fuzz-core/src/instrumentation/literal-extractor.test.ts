@@ -2,6 +2,11 @@ import { expect } from 'chai';
 import { readFileSync, readdirSync } from 'fs';
 import { HookManager } from './hook-manager';
 import { LiteralExtractor } from './literal-extractor';
+import {
+  setRandomNumberGenerator,
+  createRandomNumberGenerator,
+  resetRandomNumberGenerator,
+} from '../Math';
 
 const loadInstrumentationFixtures = () => {
   const base = `${__dirname}/../../test/fixture/instrument`;
@@ -15,11 +20,10 @@ const loadInstrumentationFixtures = () => {
     }
 
     const tcase = match[1];
-    const literals = readFileSync(`${base}/${tcase}.literals.txt`, 'utf8').trim();
     output.push({
       name,
       contents: readFileSync(`${base}/${tcase}.before.txt`, 'utf8').trim(),
-      literals: literals.length ? literals.split(/\r?\n/g) : [],
+      literals: JSON.parse(readFileSync(`${base}/${tcase}.literals.json`, 'ucs-2')),
     });
   });
 
@@ -30,13 +34,18 @@ describe('literal-extractor', () => {
   let inst: LiteralExtractor;
 
   beforeEach(() => {
+    setRandomNumberGenerator(createRandomNumberGenerator(42));
     inst = new LiteralExtractor(new HookManager({ exclude: [] }));
+  });
+
+  afterEach(() => {
+    resetRandomNumberGenerator();
   });
 
   describe('fixtures', () => {
     loadInstrumentationFixtures().forEach(tcase => {
       it(`instruments ${tcase.name}`, () => {
-        expect(inst.detect(tcase.contents)).to.deep.equal(tcase.literals);
+        expect([...inst.detect(tcase.contents)]).to.deep.equal(tcase.literals);
       });
     });
   });

@@ -1,4 +1,4 @@
-import { Expression } from 'estree';
+import { Expression, MemberExpression } from 'estree';
 import { IRuntimeServices, RuntimeServiceCollection } from './runtime-service-collection';
 import { inject, injectable } from 'inversify';
 import * as Types from '../dependencies';
@@ -38,7 +38,9 @@ export class Runtime {
   public call<K extends keyof IRuntimeServices>(
     service: K,
     method: keyof {
-      [J in keyof IRuntimeServices[K]]: IRuntimeServices[K][J] extends Function | Inliner
+      [J in keyof IRuntimeServices[K]]: IRuntimeServices[K][J] extends
+        | ((...args: Expression[]) => Expression)
+        | Inliner
         ? true
         : never
     },
@@ -46,32 +48,48 @@ export class Runtime {
   ): Expression {
     const implementation = this.services[service][method];
     if (implementation instanceof Inliner) {
-      return implementation.generator(...args);
+      return implementation.generator(
+        { accessOwnProperty: prop => this.createPropertyAccess(service, prop as any) },
+        ...args,
+      );
     }
 
     return {
       type: 'CallExpression',
-      callee: {
+      callee: this.createPropertyAccess(service, method),
+      arguments: args,
+    };
+  }
+
+  private createPropertyAccess<K extends keyof IRuntimeServices>(
+    service: K,
+    method: keyof {
+      [J in keyof IRuntimeServices[K]]: IRuntimeServices[K][J] extends
+        | ((...args: Expression[]) => Expression)
+        | Inliner
+        ? true
+        : never
+    },
+  ): MemberExpression {
+    return {
+      type: 'MemberExpression',
+      computed: false,
+      object: {
         type: 'MemberExpression',
         computed: false,
         object: {
-          type: 'MemberExpression',
-          computed: false,
-          object: {
-            type: 'Identifier',
-            name: globalName,
-          },
-          property: {
-            type: 'Identifier',
-            name: service,
-          },
+          type: 'Identifier',
+          name: globalName,
         },
         property: {
           type: 'Identifier',
-          name: method as string,
+          name: service,
         },
       },
-      arguments: args,
+      property: {
+        type: 'Identifier',
+        name: method as string,
+      },
     };
   }
 }
