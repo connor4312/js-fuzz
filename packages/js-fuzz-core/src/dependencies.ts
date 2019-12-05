@@ -1,15 +1,23 @@
 import { Container } from 'inversify';
 
+// Options and top-leve factories:
 export const FuzzOptions = Symbol('FuzzOptions');
 export const ClusterFactory = Symbol('ClusterFactory');
 
+// Corpus and sets:
+export const CorpusArtifactSet = Symbol('CorpusArtifactSet');
+export const CrashersArtifactSet = Symbol('CrashersArtifactSet');
+
+// Instrumentation:
 export const HookManager = Symbol('HookManager');
 export const LiteralExtractor = Symbol('LiteralExtractor');
 export const CoverageInstrumentor = Symbol('CoverageInstrumentor');
 
+// Mutation:
 export const MutationAlgorithms = Symbol('MutationAlgorithms');
 export const Mutator = Symbol('Mutator');
 
+// Runtime:
 export const CoverageHashService = Symbol('CoverageHashService');
 export const RuntimeServiceCollection = Symbol('RuntimeServiceCollection');
 export const Runtime = Symbol('Runtime');
@@ -65,6 +73,16 @@ export const createContainer = () => {
   container
     .bind(ClusterFactory)
     .toDynamicValue(ctx => ctx.container.resolve(require('./cluster-factory').ClusterFactory))
+    .inSingletonScope();
+
+  container
+    .bind(CorpusArtifactSet)
+    .toDynamicValue(() => new (require('./artifact-set/disk-artifact-set').DiskArtifactSet)('artifacts/corpus'))
+    .inSingletonScope();
+
+  container
+    .bind(CrashersArtifactSet)
+    .toDynamicValue(() => new (require('./artifact-set/disk-artifact-set').DiskArtifactSet)('artifacts/crashers'))
     .inSingletonScope();
 
   container

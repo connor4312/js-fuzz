@@ -10,7 +10,9 @@ import {
   writeJson,
 } from 'fs-extra';
 import { extname, join } from 'path';
+import { injectable } from 'inversify';
 
+@injectable()
 export class DiskArtifactSet<T> implements IArtifactSet<T> {
   /**
    * Additional metadata file stored in the artifacts.
@@ -22,12 +24,15 @@ export class DiskArtifactSet<T> implements IArtifactSet<T> {
   constructor(private readonly directory: string) {}
 
   public async add(artifact: IArtifact<T>) {
+    const known = await this.all();
     const id = getArtifactId(artifact);
-    const todo: Promise<any>[] = [
-      this.all().then(contents => (contents[id] = artifact)),
-      writeFile(join(this.directory, id), artifact.data),
-    ];
+    if (known[id]) {
+      return false;
+    }
 
+    known[id] = artifact;
+
+    const todo: Promise<any>[] = [writeFile(join(this.directory, id), artifact.data)];
     if (artifact.metadata) {
       todo.push(
         writeJson(join(this.directory, id + DiskArtifactSet.metadataExtension), artifact.metadata),
@@ -35,6 +40,8 @@ export class DiskArtifactSet<T> implements IArtifactSet<T> {
     }
 
     await Promise.all(todo);
+
+    return true;
   }
 
   public all() {
@@ -43,6 +50,10 @@ export class DiskArtifactSet<T> implements IArtifactSet<T> {
     }
 
     return this.data;
+  }
+
+  public async size() {
+    return Object.keys(await this.all()).length;
   }
 
   private async loadFromDisk() {

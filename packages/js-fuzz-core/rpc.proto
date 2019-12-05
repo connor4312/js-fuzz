@@ -1,0 +1,71 @@
+syntax = "proto3";
+
+package grpc;
+
+message EmptyMessage {}
+
+message ConnectResponse {
+  // Assigned worker process ID.
+  uint32 workerId = 1;
+  // Location of the script to import and run.
+  string script = 2;
+  // List of items in the corpus.
+  repeated CorpusEntry corpus = 3;
+}
+
+// An item in the fuzzing corpus.
+message CorpusEntry {
+  // raw input data
+  bytes input = 1;
+  int32 priority = 2;
+  // input priority
+}
+
+message FoundInputRequest {
+  // workerId making the call.
+  uint32 workerId = 1;
+  // raw input data
+  bytes input = 2;
+  // input priority
+  int32 priority = 3;
+}
+
+message FoundCrasherRequest {
+  // workerId making the call.
+  uint32 workerId = 1;
+  // raw input data
+  bytes input = 2;
+  // error the crasher caused
+  string error = 3;
+}
+
+message SyncRequest {
+  // workerId making the call.
+  uint32 workerId = 1;
+  // number of executions the worker has made since the last sync
+  uint64 executions = 2;
+  // number of branches covered
+  uint32 coverage = 3;
+}
+
+message SyncResponse {
+  // List of new items in the corpus.
+  repeated CorpusEntry corpus = 1;
+}
+
+service Coordinator {
+  // Connect is called when a worker process is ready to go.
+  rpc Connect(EmptyMessage) returns (ConnectResponse) {}
+
+  // FoundInput is called when a worker process finds new input
+  // it thinks may be interesting.
+  rpc FoundInput(FoundInputRequest) returns (EmptyMessage) {}
+
+  // FoundCrasherRequest is called when a worker process finds
+  // input that crashes the script.
+  rpc FoundCrasher(FoundCrasherRequest) returns (EmptyMessage) {}
+
+  // Sync is called periodically by the worker to update its stats
+  // and receive new data for the corpus.
+  rpc Sync(SyncRequest) returns (SyncResponse) {}
+}

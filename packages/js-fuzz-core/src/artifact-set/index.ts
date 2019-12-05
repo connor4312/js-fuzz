@@ -2,14 +2,19 @@ import { createHash } from 'crypto';
 
 export interface IArtifactSet<T> {
   /**
-   * Stores the artifact in the set.
+   * Stores the artifact in the set. Returns true if the artifact was new.
    */
-  add(artifact: IArtifact<T>): Promise<void>;
+  add(artifact: IArtifact<T>): Promise<boolean>;
 
   /**
    * Gets all inputs from the set.
    */
   all(): Promise<Readonly<{ [id: string]: IArtifact<T> }>>;
+
+  /**
+   * Number of items in the set.
+   */
+  size(): Promise<number>;
 }
 
 /**
